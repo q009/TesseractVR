@@ -1895,6 +1895,19 @@ bool moveplayer(physent *pl, int moveres, bool local, int curtime)
     return true;
 }
 
+void movevrplayer(physent *pl)
+{
+    if(vr::isenabled())
+    {
+        vec pos = vr::getpos();
+        vec step = vr::getstep();
+        pl->eyeheight = pos.z;
+        move(pl, step);
+        // TODO: I don't suppose this is the right way to handle movement
+        pl->newpos = pl->o;
+    }
+}
+
 int physsteps = 0, physframetime = PHYSFRAMETIME, lastphysframe = 0;
 
 void physicsframe()          // optimally schedule physics frames inside the graphics frames

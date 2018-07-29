@@ -61,6 +61,7 @@
 #ifndef STANDALONE
 #include "glexts.h"
 #include "glemu.h"
+#include "vr.h"
 #endif
 
 #include "iengine.h"

@@ -241,7 +241,8 @@ namespace game
             else if(!intermission)
             {
                 if(player1->ragdoll) cleanragdoll(player1);
-                crouchplayer(player1, 10, true);
+                if(!vr::isenabled()) crouchplayer(player1, 10, true);
+                movevrplayer(player1);
                 moveplayer(player1, 10, true);
                 swayhudgun(curtime);
                 entities::checkitems(player1);

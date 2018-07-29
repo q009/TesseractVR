@@ -836,6 +836,7 @@ void checkinput()
 void swapbuffers(bool overlay)
 {
     recorder::capture(overlay);
+    vr::submitrender();
     gle::disable();
     SDL_GL_SwapWindow(screen);
 }
@@ -1112,6 +1113,8 @@ int main(int argc, char **argv)
 
     UI::setup();
 
+    vr::init();
+
     inbetweenframes = true;
     renderbackground("initializing...");
 
@@ -1195,6 +1198,7 @@ int main(int argc, char **argv)
         updatetime();
 
         checkinput();
+        vr::update();
         UI::update();
         menuprocess();
         tryedit();

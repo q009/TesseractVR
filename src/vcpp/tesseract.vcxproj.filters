@@ -163,6 +163,12 @@
     <ClCompile Include="..\shared\zip.cpp">
       <Filter>shared</Filter>
     </ClCompile>
+    <ClCompile Include="..\engine\vr.cpp">
+      <Filter>engine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\engine\openvrinterface.cpp">
+      <Filter>engine</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\game\ai.h">
@@ -274,6 +280,12 @@
       <Filter>engine</Filter>
     </ClInclude>
     <ClInclude Include="..\engine\world.h">
+      <Filter>engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\engine\vr.h">
+      <Filter>engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\engine\openvrinterface.h">
       <Filter>engine</Filter>
     </ClInclude>
   </ItemGroup>

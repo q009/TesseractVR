@@ -1233,10 +1233,14 @@ vec worldpos, camdir, camright, camup;
 void setcammatrix()
 {
     // move from RH to Z-up LH quake style worldspace
-    cammatrix = viewmatrix;
-    cammatrix.rotate_around_y(camera1->roll*RAD);
-    cammatrix.rotate_around_x(camera1->pitch*-RAD);
-    cammatrix.rotate_around_z(camera1->yaw*-RAD);
+    if(vr::isenabled()) cammatrix.muld(vr::getviewtransform(), viewmatrix);
+    else
+    {
+        cammatrix = viewmatrix;
+        cammatrix.rotate_around_y(camera1->roll*RAD);
+        cammatrix.rotate_around_x(camera1->pitch*-RAD);
+        cammatrix.rotate_around_z(camera1->yaw*-RAD);
+    }
     cammatrix.translate(vec(camera1->o).neg());
 
     cammatrix.transposedtransformnormal(vec(viewmatrix.b), camdir);
@@ -1257,7 +1261,7 @@ void setcamprojmatrix(bool init = true, bool flush = false)
         setcammatrix();
     }
 
-    jitteraa();
+    if(!vr::isenabled()) jitteraa(); // TODO: Fix AA for stereo rendering
 
     camprojmatrix.muld(projmatrix, cammatrix);
 
@@ -1526,7 +1530,7 @@ vec calcavatarpos(const vec &pos, float dist)
 
 void renderavatar()
 {
-    if(isthirdperson()) return;
+    if(isthirdperson() || vr::isenabled()) return;
 
     matrix4 oldprojmatrix = nojittermatrix;
     projmatrix.perspective(curavatarfov, aspect, nearplane, farplane);
@@ -2380,7 +2384,8 @@ void gl_drawview()
 
     farplane = worldsize*2;
 
-    projmatrix.perspective(fovy, aspect, nearplane, farplane);
+    if(vr::isenabled()) projmatrix = vr::getviewprojection();
+    else projmatrix.perspective(fovy, aspect, nearplane, farplane);
     setcamprojmatrix();
 
     glEnable(GL_CULL_FACE);
@@ -2808,7 +2813,19 @@ void gl_drawframe()
     vieww = hudw;
     viewh = hudh;
     if(mainmenu) gl_drawmainmenu();
-    else gl_drawview();
+    else
+    {
+        if(vr::isenabled())
+        {
+            vr::setview(vr::VR_VIEW_LEFT);
+            gl_drawview();
+            vr::finishrender();
+            vr::setview(vr::VR_VIEW_RIGHT);
+            gl_drawview();
+            vr::finishrender();
+        }
+        else gl_drawview();
+    }
     UI::render();
     gl_drawhud();
 }
