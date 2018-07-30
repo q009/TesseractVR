@@ -1261,7 +1261,7 @@ void setcamprojmatrix(bool init = true, bool flush = false)
         setcammatrix();
     }
 
-    if(!vr::isenabled()) jitteraa(); // TODO: Fix AA for stereo rendering
+    jitteraa();
 
     camprojmatrix.muld(projmatrix, cammatrix);
 
