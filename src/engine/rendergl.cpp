@@ -2817,12 +2817,12 @@ void gl_drawframe()
     {
         if(vr::isenabled())
         {
-            vr::setview(vr::VR_VIEW_LEFT);
-            gl_drawview();
-            vr::finishrender();
-            vr::setview(vr::VR_VIEW_RIGHT);
-            gl_drawview();
-            vr::finishrender();
+            loopi(vr::VR_NUM_VIEWS)
+            {
+                vr::setview(i);
+                gl_drawview();
+                vr::finishrender();
+            }
         }
         else gl_drawview();
     }

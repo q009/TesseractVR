@@ -65,7 +65,7 @@ void vr::init()
             vrc->devices = new vrdevice[vrc->interface->getmaxdevices()];
 
             initscreen();
-            loopi(vr::VR_NUM_VIEWS) initbuffer(vrc->buffers[i]);
+            loopi(VR_NUM_VIEWS) initbuffer(vrc->buffers[i]);
 
             vrc->active = true;
         }
@@ -87,16 +87,17 @@ void vr::setview(int view)
     if(isenabled()) vrc->curview = view;
 }
 
+static inline void updatecamangles()
+{
+    vr::gethmdangles(camera1->yaw, camera1->pitch, camera1->roll);
+}
+
 void vr::update()
 {
     if(!isenabled()) return;
     
     vrc->interface->update(vrc->devices);
-    
-    vec angles = getangles();
-    camera1->yaw = angles.x;
-    camera1->pitch = angles.y;
-    camera1->roll = angles.z;
+    updatecamangles();
 }
 
 void vr::finishrender()
@@ -158,7 +159,7 @@ matrix4 vr::getviewprojection()
     return vrc->interface->getviewprojection(vrc->curview);
 }
 
-vec vr::getpos()
+vec vr::gethmdpos()
 {
     if(!isenabled) return vec(0);
 
@@ -170,11 +171,11 @@ vec vr::getpos()
     return tr;
 }
 
-vec vr::getstep()
+vec vr::gethmdstep()
 {
     static vec prevpos(0);
 
-    vec pos = vr::getpos();
+    vec pos = gethmdpos();
     vec step = pos;
 
     step.sub(prevpos);
@@ -183,14 +184,16 @@ vec vr::getstep()
     return step;
 }
 
-vec vr::getangles()
+void vr::gethmdangles(float &yaw, float &pitch, float &roll)
 {
-    if(!isenabled) return vec(0);
+    if(!isenabled) return;
 
     vec angles = quat(gethmd().pose).calcangles(); // FIXME: Get the angles straight out of the matrix
 
     angles.div(RAD).mul(vec(-1, 1, 1));
     swap(angles.y, angles.z);
 
-    return angles;
+    yaw = angles.x;
+    pitch = angles.y;
+    roll = angles.z;
 }

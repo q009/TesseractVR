@@ -21,11 +21,11 @@ static inline vr::EVREye geteye(int view)
 bool vr::openvrinterface::init()
 {
     vr::EVRInitError err;
-    sys = vr::VR_Init(&err, vr::VRApplication_Scene);
+    sys = VR_Init(&err, VRApplication_Scene);
 
-    if(err != vr::VRInitError_None)
+    if(err != VRInitError_None)
     {
-        conoutf("unable to init OpenVR runtime: %s", vr::VR_GetVRInitErrorAsEnglishDescription(err));
+        conoutf("unable to init OpenVR runtime: %s", VR_GetVRInitErrorAsEnglishDescription(err));
         cleanup();
         return false;
     }
@@ -35,26 +35,26 @@ bool vr::openvrinterface::init()
 
 void vr::openvrinterface::cleanup()
 {
-    vr::VR_Shutdown();
+    VR_Shutdown();
     sys = NULL;
 }
 
 int vr::openvrinterface::getdevicetype(int index)
 {
-    int ret = vr::vrdevice::VR_DEV_OTHER;
+    int ret = vrdevice::VR_DEV_OTHER;
 
     switch(sys->GetTrackedDeviceClass(index))
     {
-        case vr::TrackedDeviceClass_Controller:       
-            ret = vr::vrdevice::VR_DEV_CONTROLLER; break;
-        case vr::TrackedDeviceClass_HMD:              
-            ret = vr::vrdevice::VR_DEV_HMD;        break;
-        case vr::TrackedDeviceClass_Invalid:          
-            ret = vr::vrdevice::VR_DEV_INVALID;    break;
-        case vr::TrackedDeviceClass_GenericTracker:   
-            ret = vr::vrdevice::VR_DEV_TRACKER;    break;
-        case vr::TrackedDeviceClass_TrackingReference:
-            ret = vr::vrdevice::VR_DEV_TRACK_REF;  break;
+        case TrackedDeviceClass_Controller:
+            ret = vrdevice::VR_DEV_CONTROLLER; break;
+        case TrackedDeviceClass_HMD:
+            ret = vrdevice::VR_DEV_HMD;        break;
+        case TrackedDeviceClass_Invalid:
+            ret = vrdevice::VR_DEV_INVALID;    break;
+        case TrackedDeviceClass_GenericTracker:
+            ret = vrdevice::VR_DEV_TRACKER;    break;
+        case TrackedDeviceClass_TrackingReference:
+            ret = vrdevice::VR_DEV_TRACK_REF;  break;
     }
 
     return ret;
@@ -62,14 +62,14 @@ int vr::openvrinterface::getdevicetype(int index)
 
 void vr::openvrinterface::updateposes(vrdevice *devices)
 {
-    vr::VRCompositor()->WaitGetPoses(trackinfo, getmaxdevices(), NULL, 0);
+    VRCompositor()->WaitGetPoses(trackinfo, getmaxdevices(), NULL, 0);
     loopi(getmaxdevices())
     {
-        vr::TrackedDevicePose_t &p = trackinfo[i];
+        TrackedDevicePose_t &p = trackinfo[i];
         if(p.bPoseIsValid)
         {
             devices[i].pose = convposematrix(p.mDeviceToAbsoluteTracking);
-            if(devices[i].type == vr::vrdevice::VR_DEV_NONE) devices[i].type = getdevicetype(i);
+            if(devices[i].type == vrdevice::VR_DEV_NONE) devices[i].type = getdevicetype(i);
         }
     }
 }
@@ -81,7 +81,7 @@ void vr::openvrinterface::update(vrdevice *devices)
 
 void vr::openvrinterface::submitrender(vrbuffer &buf, int view)
 {
-    Texture_t tex = { (void*)(uintptr_t)buf.resolvetex, TextureType_OpenGL, ColorSpace_Gamma };
+    Texture_t tex = { (void*)buf.resolvetex, TextureType_OpenGL, ColorSpace_Gamma };
     VRCompositor()->Submit(geteye(view), &tex);
 }
 
@@ -92,12 +92,12 @@ void vr::openvrinterface::getresolution(uint &w, uint &h)
 
 uint vr::openvrinterface::getmaxdevices()
 {
-    return vr::k_unMaxTrackedDeviceCount;
+    return k_unMaxTrackedDeviceCount;
 }
 
 matrix4 vr::openvrinterface::getviewprojection(int view)
 {
-    vr::HmdMatrix44_t m = sys->GetProjectionMatrix(geteye(view), nearplane, farplane);
+    HmdMatrix44_t m = sys->GetProjectionMatrix(geteye(view), nearplane, farplane);
     return matrix4(vec4(m.m[0][0], m.m[1][0], m.m[2][0], m.m[3][0]),
                    vec4(m.m[0][1], m.m[1][1], m.m[2][1], m.m[3][1]), 
                    vec4(m.m[0][2], m.m[1][2], m.m[2][2], m.m[3][2]), 

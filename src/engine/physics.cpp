@@ -1899,8 +1899,8 @@ void movevrplayer(physent *pl)
 {
     if(vr::isenabled())
     {
-        vec pos = vr::getpos();
-        vec step = vr::getstep();
+        vec pos = vr::gethmdpos();
+        vec step = vr::gethmdstep();
         pl->eyeheight = pos.z;
         move(pl, step);
         // TODO: I don't suppose this is the right way to handle movement

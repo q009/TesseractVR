@@ -71,9 +71,9 @@ namespace vr
     bool isenabled();
     matrix4 getviewtransform();
     matrix4 getviewprojection();
-    vec getpos();
-    vec getstep();
-    vec getangles();
+    vec gethmdpos();
+    vec gethmdstep();
+    void gethmdangles(float &yaw, float &pitch, float &roll);
 }
 
 #endif
