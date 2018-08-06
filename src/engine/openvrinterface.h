@@ -7,16 +7,24 @@ namespace vr
     {
         IVRSystem *sys;
         TrackedDevicePose_t trackinfo[k_unMaxTrackedDeviceCount];
+        vrdev *devmap[k_unMaxTrackedDeviceCount];
 
         int getdevicetype(int index);
-        void updateposes(vrdevice *devices);
+        void recalcdevice(vrdevices &devices, int index);
+        void updatedevices(vrdevices &devices);
+        int getcontrollerrole(int index);
+        void updatecontrollerrole(vrdevices &devices, int index);
+        void newdevice(vrdevices &devices, int index);
+        void removedevice(vrdevices &devices, int index);
+        void handleevent(vrdevices &devices, VREvent_t event);
+        void pollevents(vrdevices &devices);
 
         virtual bool init();
         virtual void cleanup();
-        virtual void update(vrdevice *devices);
+        virtual void update(vrdevices &devices);
         virtual void submitrender(vrbuffer &buf, int view);
         virtual void getresolution(uint &w, uint &h);
-        virtual uint getmaxdevices();
+        virtual int getmaxdevices();
         virtual matrix4 getviewprojection(int view);
         virtual matrix4x3 getviewtransform(int view);
     };

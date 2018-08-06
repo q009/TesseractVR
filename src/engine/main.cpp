@@ -6,6 +6,7 @@ extern void cleargamma();
 
 void cleanup()
 {
+    vr::cleanup();
     recorder::stop();
     cleanupserver();
     SDL_ShowCursor(SDL_TRUE);

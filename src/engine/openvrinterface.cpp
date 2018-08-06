@@ -30,6 +30,8 @@ bool vr::openvrinterface::init()
         return false;
     }
 
+    memset(devmap, NULL, sizeof(devmap));
+
     return true;
 }
 
@@ -41,47 +43,128 @@ void vr::openvrinterface::cleanup()
 
 int vr::openvrinterface::getdevicetype(int index)
 {
-    int ret = vrdevice::VR_DEV_OTHER;
+    int ret = VR_DEV_OTHER;
 
     switch(sys->GetTrackedDeviceClass(index))
     {
         case TrackedDeviceClass_Controller:
-            ret = vrdevice::VR_DEV_CONTROLLER; break;
+            ret = VR_DEV_CONTROLLER; break;
         case TrackedDeviceClass_HMD:
-            ret = vrdevice::VR_DEV_HMD;        break;
+            ret = VR_DEV_HMD;        break;
         case TrackedDeviceClass_Invalid:
-            ret = vrdevice::VR_DEV_INVALID;    break;
+            ret = VR_DEV_INVALID;    break;
         case TrackedDeviceClass_GenericTracker:
-            ret = vrdevice::VR_DEV_TRACKER;    break;
+            ret = VR_DEV_TRACKER;    break;
         case TrackedDeviceClass_TrackingReference:
-            ret = vrdevice::VR_DEV_TRACK_REF;  break;
+            ret = VR_DEV_TRACK_REF;  break;
     }
 
     return ret;
 }
 
-void vr::openvrinterface::updateposes(vrdevice *devices)
+void vr::openvrinterface::recalcdevice(vrdevices &devices, int index)
 {
-    VRCompositor()->WaitGetPoses(trackinfo, getmaxdevices(), NULL, 0);
-    loopi(getmaxdevices())
+    TrackedDevicePose_t &p = trackinfo[index];
+    if(p.bPoseIsValid)
     {
-        TrackedDevicePose_t &p = trackinfo[i];
-        if(p.bPoseIsValid)
-        {
-            devices[i].pose = convposematrix(p.mDeviceToAbsoluteTracking);
-            if(devices[i].type == vrdevice::VR_DEV_NONE) devices[i].type = getdevicetype(i);
-        }
+        if(!devmap[index]) newdevice(devices, index);
+        else devmap[index]->update(convposematrix(p.mDeviceToAbsoluteTracking));
     }
 }
 
-void vr::openvrinterface::update(vrdevice *devices)
+void vr::openvrinterface::updatedevices(vrdevices &devices)
 {
-    updateposes(devices);
+    VRCompositor()->WaitGetPoses(trackinfo, getmaxdevices(), NULL, 0);
+    loopi(getmaxdevices()) recalcdevice(devices, i);
+}
+
+int vr::openvrinterface::getcontrollerrole(int index)
+{
+    int role = VR_DEV_NO_ROLE;
+
+    ETrackedControllerRole r = sys->GetControllerRoleForTrackedDeviceIndex(index);
+    conoutf("OpenVR: controller role %d, index %d", r, index);
+
+    switch(r)
+    {
+        case TrackedControllerRole_LeftHand:
+            role = VR_CONTROLLER_LEFT;
+            break;
+
+        case TrackedControllerRole_RightHand:
+            role = VR_CONTROLLER_RIGHT;
+            break;
+    }
+
+    return role;
+}
+
+void vr::openvrinterface::updatecontrollerrole(vrdevices &devices, int index)
+{
+    if(!devmap[index])
+    {
+        conoutf("OpenVR Error: attempted to set a role of a NULL device at index %d", index);
+        return;
+    }
+
+    if(devmap[index]->type == VR_DEV_CONTROLLER) devices.setrole(devmap[index], getcontrollerrole(index));
+}
+
+void vr::openvrinterface::newdevice(vrdevices &devices, int index)
+{
+    devmap[index] = devices.newdevice(getdevicetype(index));
+    updatecontrollerrole(devices, index);
+
+    conoutf("OpenVR: new device index %d", index);
+}
+
+void vr::openvrinterface::removedevice(vrdevices &devices, int index)
+{
+    if(!devmap[index])
+    {
+        conoutf("OpenVR Error: attempted to remove a NULL device at index %d", index);
+        return;
+    }
+
+    devices.removedevice(devmap[index]);
+    devmap[index] = NULL;
+
+    conoutf("OpenVR: removed device index %d", index);
+}
+
+void vr::openvrinterface::handleevent(vrdevices &devices, VREvent_t event)
+{
+    switch(event.eventType)
+    {
+        case VREvent_TrackedDeviceActivated:
+            newdevice(devices, event.trackedDeviceIndex);
+            break;
+
+        case VREvent_TrackedDeviceDeactivated:
+            removedevice(devices, event.trackedDeviceIndex);
+            break;
+
+        case VREvent_TrackedDeviceRoleChanged:
+            loopi(getmaxdevices()) if(devmap[i]) updatecontrollerrole(devices, i);
+            break;
+    }
+}
+
+void vr::openvrinterface::pollevents(vrdevices &devices)
+{
+    VREvent_t event;
+    while(sys->PollNextEvent(&event, sizeof(VREvent_t))) handleevent(devices, event);
+}
+
+void vr::openvrinterface::update(vrdevices &devices)
+{
+    pollevents(devices);
+    updatedevices(devices);
 }
 
 void vr::openvrinterface::submitrender(vrbuffer &buf, int view)
 {
-    Texture_t tex = { (void*)buf.resolvetex, TextureType_OpenGL, ColorSpace_Gamma };
+    Texture_t tex = { (void *)(uintptr_t)buf.resolvetex, TextureType_OpenGL, ColorSpace_Gamma };
     VRCompositor()->Submit(geteye(view), &tex);
 }
 
@@ -90,7 +173,7 @@ void vr::openvrinterface::getresolution(uint &w, uint &h)
     sys->GetRecommendedRenderTargetSize(&w, &h);
 }
 
-uint vr::openvrinterface::getmaxdevices()
+int vr::openvrinterface::getmaxdevices()
 {
     return k_unMaxTrackedDeviceCount;
 }

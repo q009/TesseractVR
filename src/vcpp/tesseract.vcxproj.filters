@@ -169,6 +169,9 @@
     <ClCompile Include="..\engine\openvrinterface.cpp">
       <Filter>engine</Filter>
     </ClCompile>
+    <ClCompile Include="..\engine\vrdev.cpp">
+      <Filter>engine</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\game\ai.h">
@@ -286,6 +289,9 @@
       <Filter>engine</Filter>
     </ClInclude>
     <ClInclude Include="..\engine\openvrinterface.h">
+      <Filter>engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\engine\vrdev.h">
       <Filter>engine</Filter>
     </ClInclude>
   </ItemGroup>

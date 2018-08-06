@@ -11,11 +11,6 @@ FVARP(vrscalefactor, 0.0001f, 12, 1000);
 
 vr::vrcontext *vrc;
 
-static vr::vrdevice &gethmd()
-{
-    return vrc->devices[0];
-}
-
 static void initbuffer(vr::vrbuffer &buf)
 {
     glGenFramebuffers_(1, &buf.resolvefb);
@@ -62,11 +57,10 @@ void vr::init()
         if(!vrc->interface->init()) vrc->interface = NULL;
         else
         {
-            vrc->devices = new vrdevice[vrc->interface->getmaxdevices()];
-
             initscreen();
             loopi(VR_NUM_VIEWS) initbuffer(vrc->buffers[i]);
 
+            vrc->interface->update(vrc->devices);
             vrc->active = true;
         }
     }
@@ -75,7 +69,6 @@ void vr::init()
 void vr::cleanup()
 {
     if(isenabled()) vrc->interface->cleanup();
-    delete[] vrc->devices;
 
     screenres(vrc->normalw, vrc->normalh);
 
@@ -87,9 +80,9 @@ void vr::setview(int view)
     if(isenabled()) vrc->curview = view;
 }
 
-static inline void updatecamangles()
+static void updatecamangles()
 {
-    vr::gethmdangles(camera1->yaw, camera1->pitch, camera1->roll);
+    vr::gethmd()->getangles(camera1->yaw, camera1->pitch, camera1->roll);
 }
 
 void vr::update()
@@ -138,7 +131,7 @@ matrix4 vr::getviewtransform()
     if(!isenabled()) return matrix4(vec(1, 0, 0), vec(0, 1, 0), vec(0, 0, 1));
 
     matrix4 eye = vrc->interface->getviewtransform(vrc->curview),
-            hmd = gethmd().pose;
+            hmd = gethmd()->pose;
 
     hmd.settranslation(0, 0, 0); // Strip the pose of its translation
     eye.d.mul3(vrscalefactor); // TODO: Move this out of here as well
@@ -159,41 +152,25 @@ matrix4 vr::getviewprojection()
     return vrc->interface->getviewprojection(vrc->curview);
 }
 
-vec vr::gethmdpos()
+int vr::getnumdevices(int type)
 {
-    if(!isenabled) return vec(0);
-
-    vec tr = gethmd().pose.d;
-
-    tr.mul(vrscalefactor).mul(vec(-1, 1, -1));
-    swap(tr.y, tr.z);
-
-    return tr;
+    if(!isenabled() || type >= VR_NUM_DEV_TYPES) return 0;
+    return type == VR_DEV_HMD ? 1 : vrc->devices.periph[type].length();
 }
 
-vec vr::gethmdstep()
+vr::vrdev *vr::getdevice(int type, int index)
 {
-    static vec prevpos(0);
-
-    vec pos = gethmdpos();
-    vec step = pos;
-
-    step.sub(prevpos);
-    prevpos = pos;
-
-    return step;
+    ASSERT(index < getnumdevices(type));
+    return type == VR_DEV_HMD ? vrc->devices.hmd : vrc->devices.periph[type][index];
 }
 
-void vr::gethmdangles(float &yaw, float &pitch, float &roll)
+vr::vrdev *vr::gethmd()
 {
-    if(!isenabled) return;
+    return getdevice(VR_DEV_HMD);
+}
 
-    vec angles = quat(gethmd().pose).calcangles(); // FIXME: Get the angles straight out of the matrix
-
-    angles.div(RAD).mul(vec(-1, 1, 1));
-    swap(angles.y, angles.z);
-
-    yaw = angles.x;
-    pitch = angles.y;
-    roll = angles.z;
+vr::vrdev *vr::getcontroller(int role)
+{
+    ASSERT(role < VR_NUM_CONTROLLERS);
+    return vrc->devices.ctrlrmap[role];
 }

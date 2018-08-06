@@ -1736,7 +1736,6 @@ VARP(maxroll, 0, 0, 20);
 FVAR(straferoll, 0, 0.033f, 90);
 FVAR(faderoll, 0, 0.95f, 1);
 VAR(floatspeed, 1, 100, 10000);
-
 void modifyvelocity(physent *pl, bool local, bool water, bool floating, int curtime)
 {
     bool allowmove = game::allowmove(pl);
@@ -1899,8 +1898,8 @@ void movevrplayer(physent *pl)
 {
     if(vr::isenabled())
     {
-        vec pos = vr::gethmdpos();
-        vec step = vr::gethmdstep();
+        vec pos = vr::gethmd()->getpos();
+        vec step = vr::gethmd()->getposdelta();
         pl->eyeheight = pos.z;
         move(pl, step);
         // TODO: I don't suppose this is the right way to handle movement
