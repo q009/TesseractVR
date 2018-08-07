@@ -31,6 +31,7 @@ bool vr::openvrinterface::init()
     }
 
     memset(devmap, NULL, sizeof(devmap));
+    ctrlrroles[VR_CONTROLLER_LEFT] = ctrlrroles[VR_CONTROLLER_RIGHT] = -1;
 
     return true;
 }
@@ -107,7 +108,13 @@ void vr::openvrinterface::updatecontrollerrole(vrdevices &devices, int index)
         return;
     }
 
-    if(devmap[index]->type == VR_DEV_CONTROLLER) devices.setrole(devmap[index], getcontrollerrole(index));
+    if(devmap[index]->type == VR_DEV_CONTROLLER)
+    {
+        int role = getcontrollerrole(index);
+
+        devices.setrole(devmap[index], role);
+        if(role != VR_DEV_NO_ROLE) ctrlrroles[role] = index;
+    }
 }
 
 void vr::openvrinterface::newdevice(vrdevices &devices, int index)
@@ -132,6 +139,41 @@ void vr::openvrinterface::removedevice(vrdevices &devices, int index)
     conoutf("OpenVR: removed device index %d", index);
 }
 
+int vr::openvrinterface::getbuttoncode(VREvent_t event)
+{
+    int res = VR_BUTTON_INVALID;
+    bool touch = event.eventType == VREvent_ButtonTouch ||
+                 event.eventType == VREvent_ButtonUntouch;
+
+    switch(event.data.controller.button)
+    {
+        case k_EButton_ApplicationMenu:
+            res = VR_BUTTON_MENU;
+            break;
+
+        case k_EButton_Grip:
+            res = VR_BUTTON_GRIP;
+            break;
+
+        case k_EButton_SteamVR_Touchpad:
+            res = VR_BUTTON_TOUCHPAD;
+            break;
+
+        case k_EButton_SteamVR_Trigger:
+            res = VR_BUTTON_TRIGGER;
+            break;
+    }
+
+    if(res != VR_BUTTON_INVALID)
+    {
+        res |= VR_KEYCODE_BASE;
+        res |= touch << VR_BUTTON_TOUCH_BIT;
+        res |= (ctrlrroles[VR_CONTROLLER_LEFT] == event.trackedDeviceIndex) << VR_BUTTON_TOUCH_LEFT_BIT;
+    }
+
+    return res;
+}
+
 void vr::openvrinterface::handleevent(vrdevices &devices, VREvent_t event)
 {
     switch(event.eventType)
@@ -147,6 +189,18 @@ void vr::openvrinterface::handleevent(vrdevices &devices, VREvent_t event)
         case VREvent_TrackedDeviceRoleChanged:
             loopi(getmaxdevices()) if(devmap[i]) updatecontrollerrole(devices, i);
             break;
+
+        case VREvent_ButtonTouch:
+            if(event.data.controller.button == k_EButton_SteamVR_Trigger) return;
+        case VREvent_ButtonPress:
+            processkey(getbuttoncode(event), true);
+            break;
+        case VREvent_ButtonUntouch:
+            if(event.data.controller.button == k_EButton_SteamVR_Trigger) return;
+        case VREvent_ButtonUnpress:
+            processkey(getbuttoncode(event), false);
+            break;
+
     }
 }
 

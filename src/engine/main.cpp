@@ -1198,8 +1198,8 @@ int main(int argc, char **argv)
         totalmillis = millis;
         updatetime();
 
-        checkinput();
         vr::update();
+        checkinput();
         UI::update();
         menuprocess();
         tryedit();

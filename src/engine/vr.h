@@ -6,6 +6,10 @@
 
 extern float vrscalefactor;
 
+#define VR_KEYCODE_BASE          0xF0000000
+#define VR_BUTTON_TOUCH_BIT      8          // Identifies touch events
+#define VR_BUTTON_TOUCH_LEFT_BIT 16         // Identifies the left controller
+
 namespace vr
 {
     enum
@@ -14,6 +18,16 @@ namespace vr
         VR_VIEW_RIGHT,
 
         VR_NUM_VIEWS
+    };
+
+    // Button codes
+    enum
+    {
+        VR_BUTTON_INVALID = 0,
+        VR_BUTTON_MENU,
+        VR_BUTTON_GRIP,
+        VR_BUTTON_TOUCHPAD,
+        VR_BUTTON_TRIGGER
     };
 
     struct vrbuffer
