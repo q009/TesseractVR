@@ -395,7 +395,8 @@ extern void physicsframe();
 extern void dropenttofloor(entity *e);
 extern bool droptofloor(vec &o, float radius, float height);
 
-extern void vecfromyawpitch(float yaw, float pitch, int move, int strafe, vec &m);
+extern void vecfromyawpitch(float yaw, float pitch, const vec &movedir, vec &m);
+extern void vecfromyawpitch(float yaw, float pitch, float move, float strafe, vec &m);
 extern void vectoyawpitch(const vec &v, float &yaw, float &pitch);
 extern void updatephysstate(physent *d);
 extern void cleardynentcache();

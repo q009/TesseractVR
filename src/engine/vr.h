@@ -5,6 +5,7 @@
 #include "vrdev.h"
 
 extern float vrscalefactor;
+extern int vrmovestyle;
 
 #define VR_KEYCODE_BASE          0xF0000000
 #define VR_BUTTON_TOUCH_BIT      8          // Identifies touch events
@@ -28,6 +29,13 @@ namespace vr
         VR_BUTTON_GRIP,
         VR_BUTTON_TOUCHPAD,
         VR_BUTTON_TRIGGER
+    };
+
+    enum
+    {
+        VR_MOVE_STYLE_LCTRLR = 0,
+        VR_MOVE_STYLE_RCTRLR,
+        VR_MOVE_STYLE_HMD
     };
 
     struct vrbuffer
@@ -57,7 +65,9 @@ namespace vr
         vrdevices devices;
         vrbuffer buffers[VR_NUM_VIEWS];
 
-        vrcontext() : active(false), curview(VR_VIEW_LEFT) {}
+        bool moving;
+
+        vrcontext() : active(false), curview(VR_VIEW_LEFT), moving(false) {}
     };
 
     void init();
@@ -72,7 +82,7 @@ namespace vr
     int getnumdevices(int type);
     vrdev *getdevice(int type, int index = 0);
     vrdev *gethmd();
-    vrdev *getcontroller(int role);
+    vrcontroller *getcontroller(int role);
 }
 
 #endif

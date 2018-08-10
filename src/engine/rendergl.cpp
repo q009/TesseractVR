@@ -1442,7 +1442,7 @@ void recomputecamera()
         }
         camera1->reset();
         camera1->type = ENT_CAMERA;
-        camera1->move = -1;
+        camera1->movedir.x = -1;
         camera1->eyeheight = camera1->aboveeye = camera1->radius = camera1->xradius = camera1->yradius = 2;
 
         matrix3 orient;

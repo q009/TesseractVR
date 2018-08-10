@@ -96,6 +96,8 @@ void vr::vrdevices::mapdevice(vrdev *dev)
 
 void vr::vrdevices::setrole(vrdev *dev, int role)
 {
+    if(dev->role != VR_DEV_NO_ROLE && ctrlrmap[dev->role] == dev) ctrlrmap[dev->role] = NULL;
+
     // If the interface didn't inform us about the role of this controller, so let's assume one
     if(dev->type == VR_DEV_CONTROLLER && role == VR_DEV_NO_ROLE)
     {
@@ -111,7 +113,9 @@ void vr::vrdevices::setrole(vrdev *dev, int role)
 
 vr::vrdev *vr::vrdevices::newdevice(int type)
 {
-    vrdev *dev = new vrdev(type);
+    vrdev *dev = NULL;
+    if(type == VR_DEV_CONTROLLER) dev = new vrcontroller();
+    else dev = new vrdev(type);
 
     if((type == VR_DEV_HMD && hmd == dev) || (type != VR_DEV_HMD && periph[type].find(dev) >= 0))
     {
@@ -153,4 +157,9 @@ void vr::vrdevices::removedevice(vrdev *dev)
     conoutf("VR: removed device: %s", getdevicetypename(type));
 
     delete dev;
+}
+
+void vr::vrcontroller::updateaxes(vec2 v)
+{
+    axes = vec2(-v.x, v.y);
 }

@@ -112,8 +112,12 @@ void vr::openvrinterface::updatecontrollerrole(vrdevices &devices, int index)
     {
         int role = getcontrollerrole(index);
 
-        devices.setrole(devmap[index], role);
-        if(role != VR_DEV_NO_ROLE) ctrlrroles[role] = index;
+        if(devmap[index]->role != role)
+        {
+            if(index == ctrlrroles[devmap[index]->role]) ctrlrroles[role] = -1;
+            devices.setrole(devmap[index], role);
+            if(role != VR_DEV_NO_ROLE) ctrlrroles[role] = index;
+        }
     }
 }
 
@@ -195,12 +199,12 @@ void vr::openvrinterface::handleevent(vrdevices &devices, VREvent_t event)
         case VREvent_ButtonPress:
             processkey(getbuttoncode(event), true);
             break;
+
         case VREvent_ButtonUntouch:
             if(event.data.controller.button == k_EButton_SteamVR_Trigger) return;
         case VREvent_ButtonUnpress:
             processkey(getbuttoncode(event), false);
             break;
-
     }
 }
 
@@ -210,10 +214,26 @@ void vr::openvrinterface::pollevents(vrdevices &devices)
     while(sys->PollNextEvent(&event, sizeof(VREvent_t))) handleevent(devices, event);
 }
 
+void vr::openvrinterface::updatecontrollers()
+{
+    loopi(VR_NUM_CONTROLLERS)
+    {
+        int idx = ctrlrroles[i];
+        if(idx < 0) continue;
+
+        VRControllerState_t state;
+        sys->GetControllerState(idx, &state, sizeof(VRControllerState_t));
+
+        vrcontroller *ctrlr = (vrcontroller *)devmap[idx];
+        ctrlr->updateaxes(vec2(state.rAxis[0].x, state.rAxis[0].y));
+    }
+}
+
 void vr::openvrinterface::update(vrdevices &devices)
 {
     pollevents(devices);
     updatedevices(devices);
+    updatecontrollers();
 }
 
 void vr::openvrinterface::submitrender(vrbuffer &buf, int view)

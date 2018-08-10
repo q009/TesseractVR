@@ -20,6 +20,7 @@ namespace vr
         int getbuttoncode(VREvent_t event);
         void handleevent(vrdevices &devices, VREvent_t event);
         void pollevents(vrdevices &devices);
+        void updatecontrollers();
 
         virtual bool init();
         virtual void cleanup();

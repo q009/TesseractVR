@@ -68,7 +68,8 @@ struct physent                                  // base entity type, can be affe
 
     int inwater;
     bool jumping;
-    char move, strafe, crouching;
+    vec movedir;
+    char crouching;
 
     uchar physstate;                            // one of PHYS_* above
     uchar state, editstate;                     // one of CS_* above
@@ -96,7 +97,8 @@ struct physent                                  // base entity type, can be affe
         timeinair = 0;
         eyeheight = maxheight;
         jumping = false;
-        strafe = move = crouching = 0;
+        movedir = vec(0);
+        crouching = 0;
         physstate = PHYS_FALL;
         vel = falling = vec(0, 0, 0);
         floor = vec(0, 0, 1);
@@ -106,6 +108,7 @@ struct physent                                  // base entity type, can be affe
     vec headpos(float offset = 0) const { return vec(o).addz(offset); }
 
     bool crouched() const { return fabs(eyeheight - maxheight*CROUCHHEIGHT) < 1e-4f; }
+    bool moving() const { return movedir.x != 0 || movedir.y != 0 || movedir.z != 0; };
 };
 
 enum
@@ -186,7 +189,8 @@ struct dynent : physent                         // animated characters, or chara
     void stopmoving()
     {
         k_left = k_right = k_up = k_down = jumping = false;
-        move = strafe = crouching = 0;
+        movedir = vec(0);
+        crouching = 0;
     }
 
     void reset()

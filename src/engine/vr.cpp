@@ -7,9 +7,12 @@
 
 extern void screenres(int w, int h);
 
-FVARP(vrscalefactor, 0.0001f, 12, 1000);
-
 vr::vrcontext *vrc;
+
+FVARP(vrscalefactor, 0.0001f, 12, 1000);
+VARP(vrmovestyle, vr::VR_MOVE_STYLE_LCTRLR, vr::VR_MOVE_STYLE_LCTRLR, vr::VR_MOVE_STYLE_HMD);
+
+ICOMMAND(vrmove, "D", (int *down), { if(vr::isenabled()) vrc->moving = (*down != 0); });
 
 static void initbuffer(vr::vrbuffer &buf)
 {
@@ -68,8 +71,9 @@ void vr::init()
 
 void vr::cleanup()
 {
-    if(isenabled()) vrc->interface->cleanup();
+    if(!isenabled()) return;
 
+    vrc->interface->cleanup();
     screenres(vrc->normalw, vrc->normalh);
 
     delete vrc;
@@ -85,12 +89,40 @@ static void updatecamangles()
     vr::gethmd()->getangles(camera1->yaw, camera1->pitch, camera1->roll);
 }
 
+static void calcctrlrmovement(vr::vrcontroller *ctrlr)
+{
+    if(ctrlr->axes.iszero()) player->movedir = ctrlr->getdir();
+    else
+    {
+        float yaw, pitch;
+        vectoyawpitch(ctrlr->getdir(), yaw, pitch);
+
+        vec dir;
+        vecfromyawpitch(yaw, pitch, vec(ctrlr->axes).normalize(), dir);
+
+        player->movedir = dir;
+    }
+}
+
+static void updatemovement()
+{
+    if(vrc->moving)
+    {
+        vr::vrcontroller *ctrlr = NULL;
+
+        if(vrmovestyle == vr::VR_MOVE_STYLE_HMD) player->movedir = vec(1, 0, 0);
+        else if((ctrlr = vr::getcontroller(vrmovestyle))) calcctrlrmovement(ctrlr);
+    }
+    else player->movedir = vec(0);
+}
+
 void vr::update()
 {
     if(!isenabled()) return;
     
     vrc->interface->update(vrc->devices);
     updatecamangles();
+    updatemovement();
 }
 
 void vr::finishrender()
@@ -169,8 +201,9 @@ vr::vrdev *vr::gethmd()
     return getdevice(VR_DEV_HMD);
 }
 
-vr::vrdev *vr::getcontroller(int role)
+vr::vrcontroller *vr::getcontroller(int role)
 {
     ASSERT(role < VR_NUM_CONTROLLERS);
-    return vrc->devices.ctrlrmap[role];
+    return (vrcontroller*)vrc->devices.ctrlrmap[role];
 }
+

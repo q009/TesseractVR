@@ -52,6 +52,14 @@ namespace vr
         matrix4 getpose();
     };
 
+    struct vrcontroller : vrdev
+    {
+        vec2 axes;
+
+        vrcontroller() : vrdev(VR_DEV_CONTROLLER) {}
+        void updateaxes(vec2 v);
+    };
+
     struct vrdevices
     {
         uint numdevices;

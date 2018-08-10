@@ -968,12 +968,19 @@ namespace game
     {
         putint(q, N_POS);
         putuint(q, d->clientnum);
-        // 3 bits phys state, 1 bit life sequence, 2 bits move, 2 bits strafe
-        uchar physstate = d->physstate | ((d->lifesequence&1)<<3) | ((d->move&3)<<4) | ((d->strafe&3)<<6);
+        // 3 bits phys state, 1 bit life sequence
+        uchar physstate = d->physstate | ((d->lifesequence&1)<<3);
         q.put(physstate);
+
+        float moveyaw, movepitch;
+        uint movemag = min(int(d->movedir.magnitude() * DNF), 0xFFFF);
+        vectoyawpitch(d->movedir, moveyaw, movepitch);
+        uint movedir = (moveyaw < 0 ? 360 + int(moveyaw) % 360 :
+            int(moveyaw) % 360) + clamp(int(movepitch + 90), 0, 180) * 360;
+
         ivec o = ivec(vec(d->o.x, d->o.y, d->o.z-d->eyeheight).mul(DMF));
         uint vel = min(int(d->vel.magnitude()*DVELF), 0xFFFF), fall = min(int(d->falling.magnitude()*DVELF), 0xFFFF);
-        // 3 bits position, 1 bit velocity, 3 bits falling, 1 bit material, 1 bit crouching
+        // 3 bits position, 1 bit velocity, 3 bits falling, 1 bit material, 1 bit crouching, 1 bit movedir
         uint flags = 0;
         if(o.x < 0 || o.x > 0xFFFF) flags |= 1<<0;
         if(o.y < 0 || o.y > 0xFFFF) flags |= 1<<1;
@@ -987,6 +994,7 @@ namespace game
         }
         if((lookupmaterial(d->feetpos())&MATF_CLIP) == MAT_GAMECLIP) flags |= 1<<7;
         if(d->crouching < 0) flags |= 1<<8;
+        if(movemag > 0xFF) flags |= 1<<9;
         putuint(q, flags);
         loopk(3)
         {
@@ -998,6 +1006,10 @@ namespace game
         q.put(dir&0xFF);
         q.put((dir>>8)&0xFF);
         q.put(clamp(int(d->roll+90), 0, 180));
+        q.put(movemag&0xFF);
+        q.put(movedir & 0xFF);
+        q.put((movedir >> 8) & 0xFF);
+        if(movemag > 0xFF) q.put((movemag>>8)&0xFF);
         q.put(vel&0xFF);
         if(vel > 0xFF) q.put((vel>>8)&0xFF);
         float velyaw, velpitch;
@@ -1158,7 +1170,8 @@ namespace game
             case N_POS:                        // position of another client
             {
                 int cn = getuint(p), physstate = p.get(), flags = getuint(p);
-                vec o, vel, falling;
+
+                vec o, vel, falling, movedir;
                 float yaw, pitch, roll;
                 loopk(3)
                 {
@@ -1169,10 +1182,14 @@ namespace game
                 yaw = dir%360;
                 pitch = clamp(dir/360, 0, 180)-90;
                 roll = clamp(int(p.get()), 0, 180)-90;
+                int move = p.get() | p.get() << 8;
+                int movemag = p.get(); if(flags&(1<<9)) movemag |= p.get()<<8;
                 int mag = p.get(); if(flags&(1<<3)) mag |= p.get()<<8;
                 dir = p.get(); dir |= p.get()<<8;
                 vecfromyawpitch(dir%360, clamp(dir/360, 0, 180)-90, 1, 0, vel);
                 vel.mul(mag/DVELF);
+                vecfromyawpitch(move%360, clamp(move/360, 0, 180)-90, 1, 0, movedir);
+                movedir.mul(movemag/DNF);
                 if(flags&(1<<4))
                 {
                     mag = p.get(); if(flags&(1<<5)) mag |= p.get()<<8;
@@ -1192,8 +1209,7 @@ namespace game
                 d->yaw = yaw;
                 d->pitch = pitch;
                 d->roll = roll;
-                d->move = (physstate>>4)&2 ? -1 : (physstate>>4)&1;
-                d->strafe = (physstate>>6)&2 ? -1 : (physstate>>6)&1;
+                d->movedir = movedir;
                 d->crouching = (flags&(1<<8))!=0 ? -1 : abs(d->crouching);
                 vec oldpos(d->o);
                 d->o = o;

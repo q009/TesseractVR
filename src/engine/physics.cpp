@@ -1337,7 +1337,7 @@ bool trystepdown(physent *d, vec &dir, float step, float xy, float z, bool init 
 
 bool trystepdown(physent *d, vec &dir, bool init = false)
 {
-    if((!d->move && !d->strafe) || !game::allowmove(d)) return false;
+    if((!d->moving()) || !game::allowmove(d)) return false;
     vec old(d->o);
     d->o.z -= STAIRHEIGHT;
     d->zmargin = -STAIRHEIGHT;
@@ -1696,12 +1696,12 @@ void phystest()
 
 COMMAND(phystest, "");
 
-void vecfromyawpitch(float yaw, float pitch, int move, int strafe, vec &m)
+void vecfromyawpitch(float yaw, float pitch, const vec &movedir, vec &m)
 {
-    if(move)
+    if(movedir.y)
     {
-        m.x = move*-sinf(RAD*yaw);
-        m.y = move*cosf(RAD*yaw);
+        m.x = movedir.y*-sinf(RAD*yaw);
+        m.y = movedir.y*cosf(RAD*yaw);
     }
     else m.x = m.y = 0;
 
@@ -1709,15 +1709,22 @@ void vecfromyawpitch(float yaw, float pitch, int move, int strafe, vec &m)
     {
         m.x *= cosf(RAD*pitch);
         m.y *= cosf(RAD*pitch);
-        m.z = move*sinf(RAD*pitch);
+        m.z = movedir.y*sinf(RAD*pitch);
     }
     else m.z = 0;
 
-    if(strafe)
+    if(movedir.x)
     {
-        m.x += strafe*cosf(RAD*yaw);
-        m.y += strafe*sinf(RAD*yaw);
+        m.x += movedir.x*cosf(RAD*yaw);
+        m.y += movedir.x*sinf(RAD*yaw);
     }
+
+    if(movedir.z) m.z += movedir.z*cosf(RAD*pitch);
+}
+
+void vecfromyawpitch(float yaw, float pitch, float move, float strafe, vec &m)
+{
+    vecfromyawpitch(yaw, pitch, vec(move, strafe, 0), m);
 }
 
 void vectoyawpitch(const vec &v, float &yaw, float &pitch)
@@ -1763,9 +1770,12 @@ void modifyvelocity(physent *pl, bool local, bool water, bool floating, int curt
     if(!floating && pl->physstate == PHYS_FALL) pl->timeinair += curtime;
 
     vec m(0.0f, 0.0f, 0.0f);
-    if((pl->move || pl->strafe) && allowmove)
+    if(pl->moving() && allowmove)
     {
-        vecfromyawpitch(pl->yaw, floating || water || pl->type==ENT_CAMERA ? pl->pitch : 0, pl->move, pl->strafe, m);
+        bool orient = !vr::isenabled() || vrmovestyle == vr::VR_MOVE_STYLE_HMD;
+        vecfromyawpitch(orient ? pl->yaw : 0,
+                        orient && (floating || water || pl->type==ENT_CAMERA) ? pl->pitch : 0,
+                        pl->movedir, m);
 
         if(!floating && pl->physstate >= PHYS_SLOPE)
         {
@@ -1809,7 +1819,7 @@ void modifygravity(physent *pl, bool water, int curtime)
         g.normalize();
         g.mul(GRAVITY*secs);
     }
-    if(!water || !game::allowmove(pl) || (!pl->move && !pl->strafe)) pl->falling.add(g);
+    if(!water || !game::allowmove(pl) || !pl->moving()) pl->falling.add(g);
 
     if(water || pl->physstate >= PHYS_SLOPE)
     {
@@ -1875,7 +1885,7 @@ bool moveplayer(physent *pl, int moveres, bool local, int curtime)
 
     // automatically apply smooth roll when strafing
 
-    if(pl->strafe && maxroll) pl->roll = clamp(pl->roll - pow(clamp(1.0f + pl->strafe*pl->roll/maxroll, 0.0f, 1.0f), 0.33f)*pl->strafe*curtime*straferoll, -maxroll, maxroll);
+    if(pl->movedir.y && maxroll) pl->roll = clamp(pl->roll - pow(clamp(1.0f + pl->movedir.y*pl->roll/maxroll, 0.0f, 1.0f), 0.33f)*pl->movedir.y*curtime*straferoll, -maxroll, maxroll);
     else pl->roll *= curtime == PHYSFRAMETIME ? faderoll : pow(faderoll, curtime/float(PHYSFRAMETIME));
 
     // play sounds on water transitions
@@ -2015,10 +2025,10 @@ void updatephysstate(physent *d)
 
 #define dir(name,v,d,s,os) ICOMMAND(name, "D", (int *down), { player->s = *down!=0; player->v = player->s ? d : (player->os ? -(d) : 0); });
 
-dir(backward, move,   -1, k_down,  k_up);
-dir(forward,  move,    1, k_up,    k_down);
-dir(left,     strafe,  1, k_left,  k_right);
-dir(right,    strafe, -1, k_right, k_left);
+dir(backward, movedir.x, -1, k_down,  k_up);
+dir(forward,  movedir.x,  1, k_up,    k_down);
+dir(left,     movedir.y,  1, k_left,  k_right);
+dir(right,    movedir.y, -1, k_right, k_left);
 
 ICOMMAND(jump,   "D", (int *down), { if(!*down || game::canjump()) player->jumping = *down!=0; });
 ICOMMAND(crouch, "D", (int *down), { if(!*down) player->crouching = abs(player->crouching); else if(game::cancrouch()) player->crouching = -1; });

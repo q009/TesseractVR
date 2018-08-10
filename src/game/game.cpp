@@ -234,7 +234,7 @@ namespace game
                 if(player1->ragdoll) moveragdoll(player1);
                 else if(lastmillis-player1->lastpain<2000)
                 {
-                    player1->move = player1->strafe = 0;
+                    player1->movedir = vec(0);
                     moveplayer(player1, 10, true);
                 }
             }
@@ -375,7 +375,7 @@ namespace game
         }
         else
         {
-            d->move = d->strafe = 0;
+            d->movedir = vec(0);
             d->resetinterp();
             d->smoothmillis = 0;
             playsound(S_DIE1, &d->o);
