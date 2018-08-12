@@ -279,7 +279,7 @@ namespace game
                     ANIM_RUN_E,  0,          ANIM_RUN_W,
                     ANIM_RUN_NE, ANIM_RUN_N, ANIM_RUN_NW
                 };
-                int dir = dirs[((int)round(d->movedir.x)+1)*3 + ((int)round(d->movedir.y)+1)];
+                int dir = dirs[((int)round(d->movedir.y)+1)*3 + ((int)round(d->movedir.x)+1)];
                 if(d->timeinair>100) anim |= ((dir ? dir+ANIM_JUMP_N-ANIM_RUN_N : ANIM_JUMP) | ANIM_END) << ANIM_SECONDARY;
                 else if(dir && game::allowmove(d)) anim |= (dir | ANIM_LOOP) << ANIM_SECONDARY;
             }
