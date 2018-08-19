@@ -479,6 +479,7 @@ struct batchedmodel
 {
     vec pos, center;
     float radius, yaw, pitch, roll, sizescale;
+    quat baseorient;
     vec4 colorscale;
     int anim, basetime, basetime2, flags, attached;
     union
@@ -542,7 +543,7 @@ static inline void renderbatchedmodel(model *m, const batchedmodel &b)
         if(b.flags&MDL_FULLBRIGHT) anim |= ANIM_FULLBRIGHT;
     }
 
-    m->render(anim, b.basetime, b.basetime2, b.pos, b.yaw, b.pitch, b.roll, b.d, a, b.sizescale, b.colorscale);
+    m->render(anim, b.basetime, b.basetime2, b.pos, b.yaw, b.pitch, b.roll, b.d, a, b.sizescale, b.colorscale, b.baseorient);
 }
 
 VAR(maxmodelradiusdistance, 10, 200, 1000);
@@ -925,6 +926,7 @@ void rendermapmodel(int idx, int anim, const vec &o, float yaw, float pitch, flo
     b.yaw = yaw;
     b.pitch = pitch;
     b.roll = roll;
+    b.baseorient = quat(0, 0, 0, 1);
     b.basetime = basetime;
     b.basetime2 = 0;
     b.sizescale = size;
@@ -936,7 +938,7 @@ void rendermapmodel(int idx, int anim, const vec &o, float yaw, float pitch, flo
     addbatchedmodel(m, b, batchedmodels.length()-1);
 }
 
-void rendermodel(const char *mdl, int anim, const vec &o, float yaw, float pitch, float roll, int flags, dynent *d, modelattach *a, int basetime, int basetime2, float size, const vec4 &color)
+void rendermodel(const char *mdl, int anim, const vec &o, float yaw, float pitch, float roll, int flags, dynent *d, modelattach *a, int basetime, int basetime2, float size, const vec4 &color, const quat &baseorient)
 {
     model *m = loadmodel(mdl);
     if(!m) return;
@@ -959,6 +961,7 @@ void rendermodel(const char *mdl, int anim, const vec &o, float yaw, float pitch
         if(anim&ANIM_RAGDOLL) flags &= ~(MDL_CULL_VFC | MDL_CULL_OCCLUDED | MDL_CULL_QUERY);
     }
     center.mul(size);
+    center = baseorient.rotate(vec(center));
     if(roll) center.rotate_around_y(-roll*RAD);
     if(pitch && m->pitched()) center.rotate_around_x(pitch*RAD);
     center.rotate_around_z(yaw*RAD);
@@ -1000,7 +1003,7 @@ hasboundbox:
         m->startrender();
         setaamask(true);
         if(flags&MDL_FULLBRIGHT) anim |= ANIM_FULLBRIGHT;
-        m->render(anim, basetime, basetime2, o, yaw, pitch, roll, d, a, size, color);
+        m->render(anim, basetime, basetime2, o, yaw, pitch, roll, d, a, size, color, baseorient);
         m->endrender();
         if(flags&MDL_CULL_QUERY && d->query) endquery(d->query);
         disableaamask();
@@ -1015,6 +1018,7 @@ hasboundbox:
     b.yaw = yaw;
     b.pitch = pitch;
     b.roll = roll;
+    b.baseorient = baseorient;
     b.basetime = basetime;
     b.basetime2 = basetime2;
     b.sizescale = size;
@@ -1027,7 +1031,7 @@ hasboundbox:
     addbatchedmodel(m, b, batchedmodels.length()-1);
 }
 
-int intersectmodel(const char *mdl, int anim, const vec &pos, float yaw, float pitch, float roll, const vec &o, const vec &ray, float &dist, int mode, dynent *d, modelattach *a, int basetime, int basetime2, float size)
+int intersectmodel(const char *mdl, int anim, const vec &pos, float yaw, float pitch, float roll, const vec &o, const vec &ray, float &dist, int mode, dynent *d, modelattach *a, int basetime, int basetime2, float size, const quat &baseorient)
 {
     model *m = loadmodel(mdl);
     if(!m) return -1;
@@ -1036,7 +1040,7 @@ int intersectmodel(const char *mdl, int anim, const vec &pos, float yaw, float p
     {
         if(a[i].name) a[i].m = loadmodel(a[i].name);
     }
-    return m->intersect(anim, basetime, basetime2, pos, yaw, pitch, roll, d, a, size, o, ray, dist, mode);
+    return m->intersect(anim, basetime, basetime2, pos, yaw, pitch, roll, d, a, size, o, ray, dist, mode, baseorient);
 }
 
 void abovemodel(vec &o, const char *mdl)

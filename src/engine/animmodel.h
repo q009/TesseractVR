@@ -1167,7 +1167,7 @@ struct animmodel : model
     static int intersectresult, intersectmode;
     static float intersectdist, intersectscale;
 
-    int intersect(int anim, int basetime, int basetime2, const vec &pos, float yaw, float pitch, float roll, dynent *d, modelattach *a, float size, const vec &o, const vec &ray, float &dist, int mode)
+    int intersect(int anim, int basetime, int basetime2, const vec &pos, float yaw, float pitch, float roll, dynent *d, modelattach *a, float size, const vec &o, const vec &ray, float &dist, int mode, const quat &baseorient)
     {
         vec axis(1, 0, 0), forward(0, 1, 0);
 
@@ -1181,6 +1181,7 @@ struct animmodel : model
             roll += spinroll*secs;
 
             matrixstack[0].settranslation(pos);
+            matrixstack[0].mul(matrix3(baseorient));
             matrixstack[0].rotate_around_z(yaw*RAD);
             bool usepitch = pitched();
             if(roll && !usepitch) matrixstack[0].rotate_around_y(-roll*RAD);
@@ -1288,7 +1289,7 @@ struct animmodel : model
         }
     }
 
-    void render(int anim, int basetime, int basetime2, const vec &o, float yaw, float pitch, float roll, dynent *d, modelattach *a, float size, const vec4 &color)
+    void render(int anim, int basetime, int basetime2, const vec &o, float yaw, float pitch, float roll, dynent *d, modelattach *a, float size, const vec4 &color, const quat &baseorient)
     {
         vec axis(1, 0, 0), forward(0, 1, 0);
 
@@ -1302,6 +1303,7 @@ struct animmodel : model
             roll += spinroll*secs;
 
             matrixstack[0].settranslation(o);
+            matrixstack[0].mul(matrix3(baseorient));
             matrixstack[0].rotate_around_z(yaw*RAD);
             bool usepitch = pitched();
             if(roll && !usepitch) matrixstack[0].rotate_around_y(-roll*RAD);
