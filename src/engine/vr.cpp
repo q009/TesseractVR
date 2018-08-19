@@ -47,6 +47,12 @@ static void initbuffer(vr::vrbuffer &buf)
     glBindFramebuffer_(GL_FRAMEBUFFER, 0);
 }
 
+static void freebuffer(vr::vrbuffer &buf)
+{
+    glDeleteTextures(1, &buf.resolvetex);
+    glDeleteBuffers_(1, &buf.resolvefb);
+}
+
 static void initscreen()
 {
     vrc->normalw = screenw;
@@ -86,6 +92,8 @@ void vr::cleanup()
 
     vrc->interface->cleanup();
     screenres(vrc->normalw, vrc->normalh);
+
+    loopi(VR_NUM_VIEWS) freebuffer(vrc->buffers[i]);
 
     delete vrc;
 }
