@@ -195,12 +195,14 @@ void vr::openvrinterface::handleevent(vrdevices &devices, VREvent_t event)
             break;
 
         case VREvent_ButtonTouch:
+            // The touch events for the triggers are quite erratic with HTC Vive wands, filter them out
             if(event.data.controller.button == k_EButton_SteamVR_Trigger) return;
         case VREvent_ButtonPress:
             processkey(getbuttoncode(event), true);
             break;
 
         case VREvent_ButtonUntouch:
+            // The touch events for the triggers are quite erratic with HTC Vive wands, filter them out
             if(event.data.controller.button == k_EButton_SteamVR_Trigger) return;
         case VREvent_ButtonUnpress:
             processkey(getbuttoncode(event), false);
