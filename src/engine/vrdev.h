@@ -37,19 +37,19 @@ namespace vr
     {
         int type;
         int role;
-        matrix4x3 pose;
+        matrix4 pose;
         vec prevpos;
 
-        vrdev(int _type) : type(_type), role(-1), pose(vec(1, 0, 0), vec(0, 1, 0), vec(0, 0, 1), vec(0, 0, 0)),
+        vrdev(int _type) : type(_type), role(-1), pose(vec(1, 0, 0), vec(0, 1, 0), vec(0, 0, 1)),
                            prevpos(0) {}
 
-        void update(const matrix4x3 &m);
+        void update(const matrix4 &m);
         vec getpos();
         vec getposdelta();
         vec getworldpos();
-        vec getdir(vec basedir = vec(0, 0, -1));
+        vec getdir(vec basedir = vec(0, 1, 0));
         void getangles(float &yaw, float &pitch, float &roll);
-        matrix4 getpose();
+        quat getorient();
     };
 
     struct vrcontroller : vrdev

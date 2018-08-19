@@ -53,7 +53,7 @@ namespace vr
         virtual void getresolution(uint &w, uint &h) = 0;
         virtual int getmaxdevices() = 0;
         virtual matrix4 getviewprojection(int view) = 0;
-        virtual matrix4x3 getviewtransform(int view) = 0;
+        virtual matrix4 getviewtransform(int view) = 0;
     };
 
     struct vrcontext
@@ -83,6 +83,8 @@ namespace vr
     vrdev *getdevice(int type, int index = 0);
     vrdev *gethmd();
     vrcontroller *getcontroller(int role);
+
+    matrix4 matrixrh2lh(matrix4 m);
 }
 
 #endif

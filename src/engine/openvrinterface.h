@@ -29,7 +29,7 @@ namespace vr
         virtual void getresolution(uint &w, uint &h);
         virtual int getmaxdevices();
         virtual matrix4 getviewprojection(int view);
-        virtual matrix4x3 getviewtransform(int view);
+        virtual matrix4 getviewtransform(int view);
     };
 
     openvrinterface *getopenvrinterface();

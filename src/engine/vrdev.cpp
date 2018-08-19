@@ -18,19 +18,14 @@ vr::vrdevices::vrdevices() : numdevices(0), hmd(NULL)
     memset(ctrlrmap, NULL, sizeof(ctrlrmap));
 }
 
-void vr::vrdev::update(const matrix4x3 &m)
+void vr::vrdev::update(const matrix4 &m)
 {
     pose = m;
 }
 
 vec vr::vrdev::getpos()
 {
-    vec tr = pose.d;
-
-    tr.mul(vrscalefactor).mul(vec(-1, 1, -1));
-    swap(tr.y, tr.z);
-
-    return tr;
+    return vec(pose.d).mul(vrscalefactor);
 }
 
 vec vr::vrdev::getposdelta()
@@ -56,32 +51,28 @@ vec vr::vrdev::getworldpos()
 
 vec vr::vrdev::getdir(vec basedir)
 {
-    vec dir;
-    getpose().transform(basedir, dir);
-
-    return dir;
+    return getorient().rotate(basedir);
 }
 
 void vr::vrdev::getangles(float &yaw, float &pitch, float &roll)
 {
-    vec angles = quat(pose).calcangles(); // FIXME: Get the angles straight out of the matrix
+    // TODO: quat.calcangles() gives bad angles, investigate
+    //vec angles = getorient().calcangles().div(RAD);
 
-    angles.div(RAD).mul(vec(-1, -1, 1));
-    swap(angles.y, angles.z);
+    //angles.div(RAD);
 
-    yaw = angles.x;
-    pitch = angles.y;
-    roll = angles.z;
+    //yaw = angles.y;
+    //pitch = angles.x;
+    //roll = angles.z;
+
+    // Temporary measure:
+    vectoyawpitch(getdir(), yaw, pitch);
+    roll = 0;
 }
 
-matrix4 vr::vrdev::getpose()
+quat vr::vrdev::getorient()
 {
-    matrix4 notrpose = pose;
-    notrpose.settranslation(0, 0, 0);
-    matrix4 m;
-    m.muld(invviewmatrix, notrpose);
-
-    return m;
+    return quat(pose);
 }
 
 void vr::vrdevices::mapdevice(vrdev *dev)

@@ -1233,10 +1233,10 @@ vec worldpos, camdir, camright, camup;
 void setcammatrix()
 {
     // move from RH to Z-up LH quake style worldspace
-    if(vr::isenabled()) cammatrix.muld(vr::getviewtransform(), viewmatrix);
+    cammatrix = viewmatrix;
+    if(vr::isenabled()) cammatrix.muld(vr::getviewtransform());
     else
     {
-        cammatrix = viewmatrix;
         cammatrix.rotate_around_y(camera1->roll*RAD);
         cammatrix.rotate_around_x(camera1->pitch*-RAD);
         cammatrix.rotate_around_z(camera1->yaw*-RAD);

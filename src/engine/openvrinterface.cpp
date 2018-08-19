@@ -5,12 +5,12 @@
 
 #include "openvrinterface.h"
 
-static matrix4x3 convposematrix(vr::HmdMatrix34_t m)
+static matrix4 convposematrix(vr::HmdMatrix34_t m)
 {
-    return matrix4x3(vec(m.m[0][0], m.m[1][0], m.m[2][0]),
-                     vec(m.m[0][1], m.m[1][1], m.m[2][1]),
-                     vec(m.m[0][2], m.m[1][2], m.m[2][2]),
-                     vec(m.m[0][3], m.m[1][3], m.m[2][3]));
+    return vr::matrixrh2lh(matrix4x3(vec(m.m[0][0], m.m[1][0], m.m[2][0]),
+                                     vec(m.m[0][1], m.m[1][1], m.m[2][1]),
+                                     vec(m.m[0][2], m.m[1][2], m.m[2][2]),
+                                     vec(m.m[0][3], m.m[1][3], m.m[2][3])));
 }
 
 static inline vr::EVREye geteye(int view)
@@ -261,7 +261,7 @@ matrix4 vr::openvrinterface::getviewprojection(int view)
                    vec4(m.m[0][3], m.m[1][3], m.m[2][3], m.m[3][3]));
 }
 
-inline matrix4x3 vr::openvrinterface::getviewtransform(int view)
+inline matrix4 vr::openvrinterface::getviewtransform(int view)
 {
     return convposematrix(sys->GetEyeToHeadTransform(geteye(view)));
 }

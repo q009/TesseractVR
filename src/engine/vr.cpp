@@ -5,6 +5,17 @@
 #include "openvrinterface.h"
 #endif
 
+matrix4 vr::matrixrh2lh(matrix4 m)
+{
+    matrix4 result;
+
+    result.muld(invviewmatrix, m);
+    result.muld(matrix4(vec(-1, 0, 0), vec(0, -1, 0), vec(0, 0, -1)));
+    result.rotate_around_x(90 * RAD);
+
+    return result;
+}
+
 extern void screenres(int w, int h);
 
 vr::vrcontext *vrc;
