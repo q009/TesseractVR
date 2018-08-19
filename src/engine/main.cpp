@@ -587,6 +587,7 @@ void resetgl()
     renderbackground("resetting OpenGL");
 
     recorder::cleanup();
+    vr::cleanup();
     cleanupva();
     cleanupparticles();
     cleanupstains();
@@ -604,6 +605,8 @@ void resetgl()
     inputgrab(grabinput);
 
     gl_init();
+
+    vr::init();
 
     inbetweenframes = false;
     if(!reloadtexture(*notexture) ||

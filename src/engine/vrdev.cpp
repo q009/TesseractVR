@@ -18,6 +18,12 @@ vr::vrdevices::vrdevices() : numdevices(0), hmd(NULL)
     memset(ctrlrmap, NULL, sizeof(ctrlrmap));
 }
 
+vr::vrdevices::~vrdevices()
+{
+    delete hmd;
+    loopi(ARRAY_SIZE(periph)) loopj(periph[i].length()) delete periph[i][j];
+}
+
 void vr::vrdev::update(const matrix4 &m)
 {
     pose = m;

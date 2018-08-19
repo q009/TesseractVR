@@ -70,6 +70,7 @@ namespace vr
         vrdev *ctrlrmap[VR_NUM_CONTROLLERS];
 
         vrdevices();
+        ~vrdevices();
 
         void mapdevice(vrdev *dev);
         void setrole(vrdev *dev, int role);

@@ -5,17 +5,6 @@
 #include "openvrinterface.h"
 #endif
 
-matrix4 vr::matrixrh2lh(matrix4 m)
-{
-    matrix4 result;
-
-    result.muld(invviewmatrix, m);
-    result.muld(matrix4(vec(-1, 0, 0), vec(0, -1, 0), vec(0, 0, -1)));
-    result.rotate_around_x(90 * RAD);
-
-    return result;
-}
-
 extern void screenres(int w, int h);
 
 vr::vrcontext *vrc;
@@ -88,14 +77,16 @@ void vr::init()
 
 void vr::cleanup()
 {
-    if(!isenabled()) return;
+    if(isenabled())
+    {
+        vrc->interface->cleanup();
+        screenres(vrc->normalw, vrc->normalh);
 
-    vrc->interface->cleanup();
-    screenres(vrc->normalw, vrc->normalh);
-
-    loopi(VR_NUM_VIEWS) freebuffer(vrc->buffers[i]);
+        loopi(VR_NUM_VIEWS) freebuffer(vrc->buffers[i]);
+    }
 
     delete vrc;
+    vrc = NULL;
 }
 
 void vr::setview(int view)
@@ -105,7 +96,8 @@ void vr::setview(int view)
 
 static void updatecamangles()
 {
-    vr::gethmd()->getangles(camera1->yaw, camera1->pitch, camera1->roll);
+    vr::vrdev *hmd = vr::gethmd();
+    if(hmd) hmd->getangles(camera1->yaw, camera1->pitch, camera1->roll);
 }
 
 static void calcctrlrmovement(vr::vrcontroller *ctrlr)
@@ -226,3 +218,13 @@ vr::vrcontroller *vr::getcontroller(int role)
     return (vrcontroller*)vrc->devices.ctrlrmap[role];
 }
 
+matrix4 vr::matrixrh2lh(matrix4 m)
+{
+    matrix4 result;
+
+    result.muld(invviewmatrix, m);
+    result.muld(matrix4(vec(-1, 0, 0), vec(0, -1, 0), vec(0, 0, -1)));
+    result.rotate_around_x(90 * RAD);
+
+    return result;
+}
