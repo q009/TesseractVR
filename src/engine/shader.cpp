@@ -170,6 +170,8 @@ static void compileglslshader(Shader &s, GLenum type, GLuint &obj, const char *d
         parts[numparts++] = glslversions[i].header;
         break;
     }
+    defformatstring(maxinstances, "#define RENDER_MAX_INSTANCES %d\n", RENDER_MAX_INSTANCES);
+    parts[numparts++] = maxinstances;
     if(glslversion < 140)
     {
         parts[numparts++] = "#extension GL_ARB_texture_rectangle : enable\n";

@@ -63,9 +63,9 @@ void setaavelocityparams(GLenum tmu)
     glActiveTexture_(GL_TEXTURE0);
 
     matrix4 reproject;
-    reproject.muld(tqaaframe ? tqaaprevscreenmatrix : screenmatrix, worldmatrix);
     vec2 jitter = tqaaframe&1 ? vec2(0.5f, 0.5f) : vec2(-0.5f, -0.5f);
     if(multisampledaa()) { jitter.x *= 0.5f; jitter.y *= -0.5f; }
+    reproject.muld(tqaaframe ? tqaaprevscreenmatrix : screenmatrix, worldmatrix[0]);
     if(tqaaframe) reproject.jitter(jitter.x, jitter.y);
     LOCALPARAM(reprojectmatrix, reproject);
     float maxvel = sqrtf(vieww*vieww + viewh*viewh)/tqaareproject;
@@ -676,17 +676,17 @@ void setupaa(int w, int h)
     else if(fxaa) { if(!fxaafbo) setupfxaa(w, h); }
 }
 
-matrix4 nojittermatrix;
+matrix4 nojittermatrix[RENDER_MAX_INSTANCES];
 
 void jitteraa()
 {
-    nojittermatrix = projmatrix;
+    loopi(renderinstances) nojittermatrix[i] = projmatrix[i];
 
     if(!drawtex && tqaa)
     {
         vec2 jitter = tqaaframe&1 ? vec2(0.25f, 0.25f) : vec2(-0.25f, -0.25f);
         if(multisampledaa()) { jitter.x *= 0.5f; jitter.y *= -0.5f; }
-        projmatrix.jitter(jitter.x*2.0f/vieww, jitter.y*2.0f/viewh);
+        loopi(renderinstances) projmatrix[i].jitter(jitter.x*2.0f/vieww, jitter.y*2.0f/viewh);
     }
 }
 

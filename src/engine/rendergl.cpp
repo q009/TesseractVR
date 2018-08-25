@@ -2,6 +2,8 @@
 
 #include "engine.h"
 
+int renderinstances = 2;
+
 bool hasVAO = false, hasTR = false, hasTSW = false, hasPBO = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasUBO = false, hasMBR = false, hasDB2 = false, hasDBB = false, hasTG = false, hasTQ = false, hasPF = false, hasTRG = false, hasTI = false, hasHFV = false, hasHFP = false, hasDBT = false, hasDC = false, hasDBGO = false, hasEGPU4 = false, hasGPU4 = false, hasGPU5 = false, hasBFE = false, hasEAL = false, hasCR = false, hasOQ2 = false, hasES3 = false, hasCB = false, hasCI = false;
 bool mesa = false, intel = false, amd = false, nvidia = false;
 
@@ -187,6 +189,10 @@ PFNGLCLEARBUFFERIVPROC        glClearBufferiv_        = NULL;
 PFNGLCLEARBUFFERUIVPROC       glClearBufferuiv_       = NULL;
 PFNGLCLEARBUFFERFVPROC        glClearBufferfv_        = NULL;
 PFNGLCLEARBUFFERFIPROC        glClearBufferfi_        = NULL;
+
+// OpenGL 3.1
+PFNGLDRAWELEMENTSINSTANCEDPROC glDrawElementsInstanced_ = NULL;
+PFNGLDRAWARRAYSINSTANCEDPROC   glDrawArraysInstanced_ = NULL;
 
 // GL_EXT_draw_buffers2
 PFNGLCOLORMASKIPROC glColorMaski_ = NULL;
@@ -396,7 +402,7 @@ void gl_checkextensions()
     if(sscanf(version, " %u.%u", &glmajorversion, &glminorversion) != 2) glversion = 100;
     else glversion = glmajorversion*100 + glminorversion*10;
 
-    if(glversion < 200) fatal("OpenGL 2.0 or greater is required!");
+    if(glversion < 310) fatal("OpenGL 3.1 or greater is required!");
 
 #ifdef WIN32
     glActiveTexture_ =            (PFNGLACTIVETEXTUREPROC)            getprocaddress("glActiveTexture");
@@ -514,11 +520,17 @@ void gl_checkextensions()
     glVertexAttribPointer_ =      (PFNGLVERTEXATTRIBPOINTERPROC)      getprocaddress("glVertexAttribPointer");
 
     glDrawBuffers_ =              (PFNGLDRAWBUFFERSPROC)              getprocaddress("glDrawBuffers");
+    glDrawArraysInstanced_ =      (PFNGLDRAWARRAYSINSTANCEDPROC)      getprocaddress("glDrawArraysInstanced");
 #endif
 
     if(glversion >= 300)
     {
-        glGetStringi_ =            (PFNGLGETSTRINGIPROC)          getprocaddress("glGetStringi");
+        glGetStringi_ =           (PFNGLGETSTRINGIPROC)               getprocaddress("glGetStringi");
+    }
+
+    if(glversion >= 310)
+    {
+        glDrawElementsInstanced_ = (PFNGLDRAWELEMENTSINSTANCEDPROC)       getprocaddress("glDrawElementsInstanced");
     }
 
     const char *glslstr = (const char *)glGetString(GL_SHADING_LANGUAGE_VERSION);
@@ -527,7 +539,7 @@ void gl_checkextensions()
     uint glslmajorversion, glslminorversion;
     if(glslstr && sscanf(glslstr, " %u.%u", &glslmajorversion, &glslminorversion) == 2) glslversion = glslmajorversion*100 + glslminorversion;
 
-    if(glslversion < 120) fatal("GLSL 1.20 or greater is required!");
+    if(glslversion < 140) fatal("GLSL 1.40 or greater is required!");
 
     parseglexts();
 
@@ -1254,6 +1266,13 @@ void setcammatrix()
     }
 }
 
+matrix4 getviewproj(int instance)
+{
+    matrix4 proj = projmatrix[instance];
+    proj.jitter(instance ? 0.5f : -0.5f, 0);
+    return proj;
+}
+
 void setcamprojmatrix(bool init = true, bool flush = false)
 {
     if(init)
@@ -1263,17 +1282,28 @@ void setcamprojmatrix(bool init = true, bool flush = false)
 
     jitteraa();
 
-    camprojmatrix.muld(projmatrix, cammatrix);
+    loopi(renderinstances)
+    {
+        camprojmatrix[i].identity();
+        camprojmatrix[i].muld(getviewproj(i));
+        camprojmatrix[i].muld(cammatrix);
+    }
 
     if(init)
     {
         invcammatrix.invert(cammatrix);
-        invprojmatrix.invert(projmatrix);
-        invcamprojmatrix.invert(camprojmatrix);
+        loopi(renderinstances)
+        {
+            invprojmatrix[i].invert(projmatrix[i]);
+            invcamprojmatrix[i].invert(camprojmatrix[i]);
+        }
     }
 
-    GLOBALPARAM(camprojmatrix, camprojmatrix);
-    GLOBALPARAM(lineardepthscale, projmatrix.lineardepthscale()); //(invprojmatrix.c.z, invprojmatrix.d.z));
+    vec2 lineardepthscale[RENDER_MAX_INSTANCES];
+    loopi(renderinstances) lineardepthscale[i] = projmatrix[i].lineardepthscale();
+
+    GLOBALPARAMV(camprojmatrix, camprojmatrix, RENDER_MAX_INSTANCES);
+    GLOBALPARAMV(lineardepthscale, lineardepthscale, RENDER_MAX_INSTANCES); //(invprojmatrix.c.z, invprojmatrix.d.z));
 
     if(flush && Shader::lastshader) Shader::lastshader->flushparams();
 }
@@ -1508,7 +1538,7 @@ float calcfrustumboundsphere(float nearplane, float farplane,  const vec &pos, c
 
 extern const matrix4 viewmatrix(vec(-1, 0, 0), vec(0, 0, 1), vec(0, -1, 0));
 extern const matrix4 invviewmatrix(vec(-1, 0, 0), vec(0, 0, -1), vec(0, 1, 0));
-matrix4 cammatrix, projmatrix, camprojmatrix, invcammatrix, invcamprojmatrix, invprojmatrix;
+matrix4 cammatrix, projmatrix[RENDER_MAX_INSTANCES], camprojmatrix[RENDER_MAX_INSTANCES], invcammatrix, invcamprojmatrix[RENDER_MAX_INSTANCES], invprojmatrix[RENDER_MAX_INSTANCES];
 
 FVAR(nearplane, 0.01f, 0.54f, 2.0f);
 
@@ -1523,7 +1553,7 @@ vec calcavatarpos(const vec &pos, float dist)
     scrpos.z = (eyepos.z*(farplane + nearplane) - 2*nearplane*farplane) / (farplane - nearplane);
     scrpos.w = -eyepos.z;
 
-    vec worldpos = invcamprojmatrix.perspectivetransform(scrpos);
+    vec worldpos = invcamprojmatrix[0].perspectivetransform(scrpos);
     vec dir = vec(worldpos).sub(camera1->o).rescale(dist);
     return dir.add(camera1->o);
 }
@@ -1532,16 +1562,21 @@ void renderavatar()
 {
     if(isthirdperson() || vr::isenabled()) return;
 
-    matrix4 oldprojmatrix = nojittermatrix;
-    projmatrix.perspective(curavatarfov, aspect, nearplane, farplane);
-    projmatrix.scalez(avatardepth);
+    matrix4 oldprojmatrix[RENDER_MAX_INSTANCES];
+    loopi(renderinstances)
+    {
+        oldprojmatrix[i] = nojittermatrix[i];
+        projmatrix[i].perspective(curavatarfov, aspect, nearplane, farplane);
+        projmatrix[i].scalez(avatardepth);
+    }
     setcamprojmatrix(false);
 
     enableavatarmask();
     game::renderavatar();
     disableavatarmask();
 
-    projmatrix = oldprojmatrix;
+    loopi(renderinstances) projmatrix[i] = oldprojmatrix[i];
+
     setcamprojmatrix(false);
 }
 
@@ -1549,7 +1584,7 @@ FVAR(polygonoffsetfactor, -1e4f, -3.0f, 1e4f);
 FVAR(polygonoffsetunits, -1e4f, -3.0f, 1e4f);
 FVAR(depthoffset, -1e4f, 0.01f, 1e4f);
 
-matrix4 nooffsetmatrix;
+matrix4 nooffsetmatrix[RENDER_MAX_INSTANCES];
 
 void enablepolygonoffset(GLenum type)
 {
@@ -1560,9 +1595,13 @@ void enablepolygonoffset(GLenum type)
         return;
     }
 
-    projmatrix = nojittermatrix;
-    nooffsetmatrix = projmatrix;
-    projmatrix.d.z += depthoffset * projmatrix.c.z;
+    loopi(renderinstances)
+    {
+        projmatrix[i] = nojittermatrix[i];
+        nooffsetmatrix[i] = projmatrix[i];
+        projmatrix[i].d.z += depthoffset * projmatrix[i].c.z;
+    }
+
     setcamprojmatrix(false, true);
 }
 
@@ -1574,190 +1613,223 @@ void disablepolygonoffset(GLenum type)
         return;
     }
 
-    projmatrix = nooffsetmatrix;
+    loopi(renderinstances) projmatrix[i] = nooffsetmatrix[i];
     setcamprojmatrix(false, true);
 }
 
 bool calcspherescissor(const vec &center, float size, float &sx1, float &sy1, float &sx2, float &sy2, float &sz1, float &sz2)
 {
     vec e;
-    cammatrix.transform(center, e);
-    if(e.z > 2*size) { sx1 = sy1 = sz1 = 1; sx2 = sy2 = sz2 = -1; return false; }
+    
     if(drawtex == DRAWTEX_MINIMAP)
     {
+        cammatrix.transform(center, e);
+        if(e.z > 2*size) { sx1 = sy1 = sz1 = 1; sx2 = sy2 = sz2 = -1; return false; }
+
         vec dir(size, size, size);
-        if(projmatrix.a.x < 0) dir.x = -dir.x;
-        if(projmatrix.b.y < 0) dir.y = -dir.y;
-        if(projmatrix.c.z < 0) dir.z = -dir.z;
-        sx1 = max(projmatrix.a.x*(e.x - dir.x) + projmatrix.d.x, -1.0f);
-        sx2 = min(projmatrix.a.x*(e.x + dir.x) + projmatrix.d.x, 1.0f);
-        sy1 = max(projmatrix.b.y*(e.y - dir.y) + projmatrix.d.y, -1.0f);
-        sy2 = min(projmatrix.b.y*(e.y + dir.y) + projmatrix.d.y, 1.0f);
-        sz1 = max(projmatrix.c.z*(e.z - dir.z) + projmatrix.d.z, -1.0f);
-        sz2 = min(projmatrix.c.z*(e.z + dir.z) + projmatrix.d.z, 1.0f);
+        if(projmatrix[0].a.x < 0) dir.x = -dir.x;
+        if(projmatrix[0].b.y < 0) dir.y = -dir.y;
+        if(projmatrix[0].c.z < 0) dir.z = -dir.z;
+        sx1 = max(projmatrix[0].a.x*(e.x - dir.x) + projmatrix[0].d.x, -1.0f);
+        sx2 = min(projmatrix[0].a.x*(e.x + dir.x) + projmatrix[0].d.x, 1.0f);
+        sy1 = max(projmatrix[0].b.y*(e.y - dir.y) + projmatrix[0].d.y, -1.0f);
+        sy2 = min(projmatrix[0].b.y*(e.y + dir.y) + projmatrix[0].d.y, 1.0f);
+        sz1 = max(projmatrix[0].c.z*(e.z - dir.z) + projmatrix[0].d.z, -1.0f);
+        sz2 = min(projmatrix[0].c.z*(e.z + dir.z) + projmatrix[0].d.z, 1.0f);
         return sx1 < sx2 && sy1 < sy2 && sz1 < sz2;
     }
-    float zzrr = e.z*e.z - size*size,
-          dx = e.x*e.x + zzrr, dy = e.y*e.y + zzrr,
-          focaldist = 1.0f/tan(fovy*0.5f*RAD);
-    sx1 = sy1 = -1;
-    sx2 = sy2 = 1;
-    #define CHECKPLANE(c, dir, focaldist, low, high) \
-    do { \
-        float nzc = (cz*cz + 1) / (cz dir drt) - cz, \
-              pz = (d##c)/(nzc*e.c - e.z); \
-        if(pz > 0) \
-        { \
-            float c = (focaldist)*nzc, \
-                  pc = pz*nzc; \
-            if(pc < e.c) low = c; \
-            else if(pc > e.c) high = c; \
-        } \
-    } while(0)
-    if(dx > 0)
+    else
     {
-        float cz = e.x/e.z, drt = sqrtf(dx)/size;
-        CHECKPLANE(x, -, focaldist/aspect, sx1, sx2);
-        CHECKPLANE(x, +, focaldist/aspect, sx1, sx2);
+        // TODO: Fix scissors for stereo rendering
+        sx1 = sy1 = sz1 = -1; sx2 = sy2 = sz2 = 1;
+        return true;
+
+        //sx1 = sy1 = -1;
+        //sx2 = sy2 = 1;
+        //return sx1 < sx2 && sy1 < sy2 && sz1 < sz2;
+
+        //float focaldist = 1.0f/tan(fovy*0.5f*RAD);
+
+        //loopi(renderinstances)
+        //{
+        //    camprojmatrix[i].transform(center, e);
+        //    e.z = -e.z;
+        //    e.x /= focaldist/aspect;
+        //    e.y /= focaldist;
+
+        //    if(e.z > 2*size) { sx1 = sy1 = sz1 = 1; sx2 = sy2 = sz2 = -1; return false; }
+
+        //    float zzrr = e.z*e.z - size*size,
+        //          dx = e.x*e.x + zzrr, dy = e.y*e.y + zzrr;
+ 
+        //    #define CHECKPLANE(c, dir, focaldist, low, high) \
+        //    do { \
+        //        float nzc = (cz*cz + 1) / (cz dir drt) - cz, \
+        //              pz = (d##c)/(nzc*e.c - e.z); \
+        //        if(pz > 0) \
+        //        { \
+        //            float c = (focaldist)*nzc, \
+        //                  pc = pz*nzc; \
+        //            if(pc < e.c) low = c; \
+        //            else if(pc > e.c) high = c; \
+        //        } \
+        //    } while(0)
+        //    if(dx > 0)
+        //    {
+        //        float cz = e.x/e.z, drt = sqrtf(dx)/size;
+        //        CHECKPLANE(x, -, focaldist/aspect, sx1, sx2);
+        //        CHECKPLANE(x, +, focaldist/aspect, sx1, sx2);
+        //    }
+        //    if(dy > 0)
+        //    {
+        //        float cz = e.y/e.z, drt = sqrtf(dy)/size;
+        //        CHECKPLANE(y, -, focaldist, sy1, sy2);
+        //        CHECKPLANE(y, +, focaldist, sy1, sy2);
+        //    }
+        //}
+
+        //float z1 = min(e.z + size, -1e-3f - nearplane), z2 = min(e.z - size, -1e-3f - nearplane);
+        //sz1 = (z1*projmatrix.c.z + projmatrix.d.z) / (z1*projmatrix.c.w + projmatrix.d.w);
+        //sz2 = (z2*projmatrix.c.z + projmatrix.d.z) / (z2*projmatrix.c.w + projmatrix.d.w);
     }
-    if(dy > 0)
-    {
-        float cz = e.y/e.z, drt = sqrtf(dy)/size;
-        CHECKPLANE(y, -, focaldist, sy1, sy2);
-        CHECKPLANE(y, +, focaldist, sy1, sy2);
-    }
-    float z1 = min(e.z + size, -1e-3f - nearplane), z2 = min(e.z - size, -1e-3f - nearplane);
-    sz1 = (z1*projmatrix.c.z + projmatrix.d.z) / (z1*projmatrix.c.w + projmatrix.d.w);
-    sz2 = (z2*projmatrix.c.z + projmatrix.d.z) / (z2*projmatrix.c.w + projmatrix.d.w);
+
     return sx1 < sx2 && sy1 < sy2 && sz1 < sz2;
 }
 
 bool calcbbscissor(const ivec &bbmin, const ivec &bbmax, float &sx1, float &sy1, float &sx2, float &sy2)
 {
-#define ADDXYSCISSOR(p) do { \
-        if(p.z >= -p.w) \
-        { \
-            float x = p.x / p.w, y = p.y / p.w; \
-            sx1 = min(sx1, x); \
-            sy1 = min(sy1, y); \
-            sx2 = max(sx2, x); \
-            sy2 = max(sy2, y); \
-        } \
-    } while(0)
-    vec4 v[8];
-    sx1 = sy1 = 1;
-    sx2 = sy2 = -1;
-    camprojmatrix.transform(vec(bbmin.x, bbmin.y, bbmin.z), v[0]);
-    ADDXYSCISSOR(v[0]);
-    camprojmatrix.transform(vec(bbmax.x, bbmin.y, bbmin.z), v[1]);
-    ADDXYSCISSOR(v[1]);
-    camprojmatrix.transform(vec(bbmin.x, bbmax.y, bbmin.z), v[2]);
-    ADDXYSCISSOR(v[2]);
-    camprojmatrix.transform(vec(bbmax.x, bbmax.y, bbmin.z), v[3]);
-    ADDXYSCISSOR(v[3]);
-    camprojmatrix.transform(vec(bbmin.x, bbmin.y, bbmax.z), v[4]);
-    ADDXYSCISSOR(v[4]);
-    camprojmatrix.transform(vec(bbmax.x, bbmin.y, bbmax.z), v[5]);
-    ADDXYSCISSOR(v[5]);
-    camprojmatrix.transform(vec(bbmin.x, bbmax.y, bbmax.z), v[6]);
-    ADDXYSCISSOR(v[6]);
-    camprojmatrix.transform(vec(bbmax.x, bbmax.y, bbmax.z), v[7]);
-    ADDXYSCISSOR(v[7]);
-    if(sx1 > sx2 || sy1 > sy2) return false;
-    loopi(8)
-    {
-        const vec4 &p = v[i];
-        if(p.z >= -p.w) continue;
-        loopj(3)
-        {
-            const vec4 &o = v[i^(1<<j)];
-            if(o.z <= -o.w) continue;
-#define INTERPXYSCISSOR(p, o) do { \
-            float t = (p.z + p.w)/(p.z + p.w - o.z - o.w), \
-                  w = p.w + t*(o.w - p.w), \
-                  x = (p.x + t*(o.x - p.x))/w, \
-                  y = (p.y + t*(o.y - p.y))/w; \
-            sx1 = min(sx1, x); \
-            sy1 = min(sy1, y); \
-            sx2 = max(sx2, x); \
-            sy2 = max(sy2, y); \
-        } while(0)
-            INTERPXYSCISSOR(p, o);
-        }
-    }
-    sx1 = max(sx1, -1.0f);
-    sy1 = max(sy1, -1.0f);
-    sx2 = min(sx2, 1.0f);
-    sy2 = min(sy2, 1.0f);
+    // TODO: Fix scissors for stereo rendering
+    sx1 = sy1 = -1; sx2 = sy2 = 1;
     return true;
+
+//#define ADDXYSCISSOR(p) do { \
+//        if(p.z >= -p.w) \
+//        { \
+//            float x = p.x / p.w, y = p.y / p.w; \
+//            sx1 = min(sx1, x); \
+//            sy1 = min(sy1, y); \
+//            sx2 = max(sx2, x); \
+//            sy2 = max(sy2, y); \
+//        } \
+//    } while(0)
+//    vec4 v[8];
+//    sx1 = sy1 = 1;
+//    sx2 = sy2 = -1;
+//    camprojmatrix[0].transform(vec(bbmin.x, bbmin.y, bbmin.z), v[0]);
+//    ADDXYSCISSOR(v[0]);
+//    camprojmatrix[0].transform(vec(bbmax.x, bbmin.y, bbmin.z), v[1]);
+//    ADDXYSCISSOR(v[1]);
+//    camprojmatrix[0].transform(vec(bbmin.x, bbmax.y, bbmin.z), v[2]);
+//    ADDXYSCISSOR(v[2]);
+//    camprojmatrix[0].transform(vec(bbmax.x, bbmax.y, bbmin.z), v[3]);
+//    ADDXYSCISSOR(v[3]);
+//    camprojmatrix[0].transform(vec(bbmin.x, bbmin.y, bbmax.z), v[4]);
+//    ADDXYSCISSOR(v[4]);
+//    camprojmatrix[0].transform(vec(bbmax.x, bbmin.y, bbmax.z), v[5]);
+//    ADDXYSCISSOR(v[5]);
+//    camprojmatrix[0].transform(vec(bbmin.x, bbmax.y, bbmax.z), v[6]);
+//    ADDXYSCISSOR(v[6]);
+//    camprojmatrix[0].transform(vec(bbmax.x, bbmax.y, bbmax.z), v[7]);
+//    ADDXYSCISSOR(v[7]);
+//    if(sx1 > sx2 || sy1 > sy2) return false;
+//    loopi(8)
+//    {
+//        const vec4 &p = v[i];
+//        if(p.z >= -p.w) continue;
+//        loopj(3)
+//        {
+//            const vec4 &o = v[i^(1<<j)];
+//            if(o.z <= -o.w) continue;
+//#define INTERPXYSCISSOR(p, o) do { \
+//            float t = (p.z + p.w)/(p.z + p.w - o.z - o.w), \
+//                  w = p.w + t*(o.w - p.w), \
+//                  x = (p.x + t*(o.x - p.x))/w, \
+//                  y = (p.y + t*(o.y - p.y))/w; \
+//            sx1 = min(sx1, x); \
+//            sy1 = min(sy1, y); \
+//            sx2 = max(sx2, x); \
+//            sy2 = max(sy2, y); \
+//        } while(0)
+//            INTERPXYSCISSOR(p, o);
+//        }
+//    }
+//    sx1 = max(sx1, -1.0f);
+//    sy1 = max(sy1, -1.0f);
+//    sx2 = min(sx2, 1.0f);
+//    sy2 = min(sy2, 1.0f);
+//    return true;
 }
 
 bool calcspotscissor(const vec &origin, float radius, const vec &dir, int spot, const vec &spotx, const vec &spoty, float &sx1, float &sy1, float &sx2, float &sy2, float &sz1, float &sz2)
 {
-    float spotscale = radius * tan360(spot);
-    vec up = vec(spotx).mul(spotscale), right = vec(spoty).mul(spotscale), center = vec(dir).mul(radius).add(origin);
-#define ADDXYZSCISSOR(p) do { \
-        if(p.z >= -p.w) \
-        { \
-            float x = p.x / p.w, y = p.y / p.w, z = p.z / p.w; \
-            sx1 = min(sx1, x); \
-            sy1 = min(sy1, y); \
-            sz1 = min(sz1, z); \
-            sx2 = max(sx2, x); \
-            sy2 = max(sy2, y); \
-            sz2 = max(sz2, z); \
-        } \
-    } while(0)
-    vec4 v[5];
-    sx1 = sy1 = sz1 = 1;
-    sx2 = sy2 = sz2 = -1;
-    camprojmatrix.transform(vec(center).sub(right).sub(up), v[0]);
-    ADDXYZSCISSOR(v[0]);
-    camprojmatrix.transform(vec(center).add(right).sub(up), v[1]);
-    ADDXYZSCISSOR(v[1]);
-    camprojmatrix.transform(vec(center).sub(right).add(up), v[2]);
-    ADDXYZSCISSOR(v[2]);
-    camprojmatrix.transform(vec(center).add(right).add(up), v[3]);
-    ADDXYZSCISSOR(v[3]);
-    camprojmatrix.transform(origin, v[4]);
-    ADDXYZSCISSOR(v[4]);
-    if(sx1 > sx2 || sy1 > sy2 || sz1 > sz2) return false;
-    loopi(4)
-    {
-        const vec4 &p = v[i];
-        if(p.z >= -p.w) continue;
-        loopj(2)
-        {
-            const vec4 &o = v[i^(1<<j)];
-            if(o.z <= -o.w) continue;
-#define INTERPXYZSCISSOR(p, o) do { \
-            float t = (p.z + p.w)/(p.z + p.w - o.z - o.w), \
-                  w = p.w + t*(o.w - p.w), \
-                  x = (p.x + t*(o.x - p.x))/w, \
-                  y = (p.y + t*(o.y - p.y))/w; \
-            sx1 = min(sx1, x); \
-            sy1 = min(sy1, y); \
-            sz1 = min(sz1, -1.0f); \
-            sx2 = max(sx2, x); \
-            sy2 = max(sy2, y); \
-        } while(0)
-            INTERPXYZSCISSOR(p, o);
-        }
-        if(v[4].z > -v[4].w) INTERPXYZSCISSOR(p, v[4]);
-    }
-    if(v[4].z < -v[4].w) loopj(4)
-    {
-        const vec4 &o = v[j];
-        if(o.z <= -o.w) continue;
-        INTERPXYZSCISSOR(v[4], o);
-    }
-    sx1 = max(sx1, -1.0f);
-    sy1 = max(sy1, -1.0f);
-    sz1 = max(sz1, -1.0f);
-    sx2 = min(sx2, 1.0f);
-    sy2 = min(sy2, 1.0f);
-    sz2 = min(sz2, 1.0f);
+    // TODO: Fix scissors for stereo rendering
+    sx1 = sy1 = sz1 = -1; sx2 = sy2 = sz2 = 1;
     return true;
+
+//    float spotscale = radius * tan360(spot);
+//    vec up = vec(spotx).mul(spotscale), right = vec(spoty).mul(spotscale), center = vec(dir).mul(radius).add(origin);
+//#define ADDXYZSCISSOR(p) do { \
+//        if(p.z >= -p.w) \
+//        { \
+//            float x = p.x / p.w, y = p.y / p.w, z = p.z / p.w; \
+//            sx1 = min(sx1, x); \
+//            sy1 = min(sy1, y); \
+//            sz1 = min(sz1, z); \
+//            sx2 = max(sx2, x); \
+//            sy2 = max(sy2, y); \
+//            sz2 = max(sz2, z); \
+//        } \
+//    } while(0)
+//    vec4 v[5];
+//    sx1 = sy1 = sz1 = 1;
+//    sx2 = sy2 = sz2 = -1;
+//    camprojmatrix[0].transform(vec(center).sub(right).sub(up), v[0]);
+//    ADDXYZSCISSOR(v[0]);
+//    camprojmatrix[0].transform(vec(center).add(right).sub(up), v[1]);
+//    ADDXYZSCISSOR(v[1]);
+//    camprojmatrix[0].transform(vec(center).sub(right).add(up), v[2]);
+//    ADDXYZSCISSOR(v[2]);
+//    camprojmatrix[0].transform(vec(center).add(right).add(up), v[3]);
+//    ADDXYZSCISSOR(v[3]);
+//    camprojmatrix[0].transform(origin, v[4]);
+//    ADDXYZSCISSOR(v[4]);
+//    if(sx1 > sx2 || sy1 > sy2 || sz1 > sz2) return false;
+//    loopi(4)
+//    {
+//        const vec4 &p = v[i];
+//        if(p.z >= -p.w) continue;
+//        loopj(2)
+//        {
+//            const vec4 &o = v[i^(1<<j)];
+//            if(o.z <= -o.w) continue;
+//#define INTERPXYZSCISSOR(p, o) do { \
+//            float t = (p.z + p.w)/(p.z + p.w - o.z - o.w), \
+//                  w = p.w + t*(o.w - p.w), \
+//                  x = (p.x + t*(o.x - p.x))/w, \
+//                  y = (p.y + t*(o.y - p.y))/w; \
+//            sx1 = min(sx1, x); \
+//            sy1 = min(sy1, y); \
+//            sz1 = min(sz1, -1.0f); \
+//            sx2 = max(sx2, x); \
+//            sy2 = max(sy2, y); \
+//        } while(0)
+//            INTERPXYZSCISSOR(p, o);
+//        }
+//        if(v[4].z > -v[4].w) INTERPXYZSCISSOR(p, v[4]);
+//    }
+//    if(v[4].z < -v[4].w) loopj(4)
+//    {
+//        const vec4 &o = v[j];
+//        if(o.z <= -o.w) continue;
+//        INTERPXYZSCISSOR(v[4], o);
+//    }
+//    sx1 = max(sx1, -1.0f);
+//    sy1 = max(sy1, -1.0f);
+//    sz1 = max(sz1, -1.0f);
+//    sx2 = min(sx2, 1.0f);
+//    sy2 = min(sy2, 1.0f);
+//    sz2 = min(sz2, 1.0f);
+//    return true;
 }
 
 static GLuint screenquadvbo = 0;
@@ -1785,7 +1857,7 @@ void screenquad()
     gle::bindvbo(screenquadvbo);
     gle::enablevertex();
     gle::vertexpointer(sizeof(vec2), (const vec2 *)0, GL_FLOAT, 2);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glDrawArraysInstanced_(GL_TRIANGLE_STRIP, 0, 4, renderinstances);
     gle::disablevertex();
     gle::clearvbo();
 }
@@ -2102,7 +2174,7 @@ void drawminimap()
 
     float zscale = max(float(minimapheight), minimapcenter.z + minimapradius.z + 1) + 1;
 
-    projmatrix.ortho(-minimapradius.x, minimapradius.x, -minimapradius.y, minimapradius.y, 0, 2*zscale);
+    projmatrix[0].ortho(-minimapradius.x, minimapradius.x, -minimapradius.y, minimapradius.y, 0, 2*zscale);
     setcamprojmatrix();
 
     glEnable(GL_CULL_FACE);
@@ -2125,7 +2197,7 @@ void drawminimap()
     if(minimapheight > 0 && minimapheight < minimapcenter.z + minimapradius.z)
     {
         camera1->o.z = minimapcenter.z + minimapradius.z + 1;
-        projmatrix.ortho(-minimapradius.x, minimapradius.x, -minimapradius.y, minimapradius.y, -zscale, zscale);
+        projmatrix[0].ortho(-minimapradius.x, minimapradius.x, -minimapradius.y, minimapradius.y, -zscale, zscale);
         setcamprojmatrix();
         rendergbuffer(false);
         shademinimap();
@@ -2198,7 +2270,7 @@ void drawcubemap(int size, const vec &o, float yaw, float pitch, const cubemapsi
     aspect = 1;
     farplane = worldsize*2;
     vieww = viewh = size;
-    projmatrix.perspective(fovy, aspect, nearplane, farplane);
+    projmatrix[0].perspective(fovy, aspect, nearplane, farplane);
     setcamprojmatrix();
 
     glEnable(GL_CULL_FACE);
@@ -2320,7 +2392,8 @@ namespace modelpreview
         ldrscale = 1;
         ldrscaleb = ldrscale/255;
 
-        projmatrix.perspective(fovy, aspect, nearplane, farplane);
+        // TODO: Stereo model preview
+        projmatrix[0].perspective(fovy, aspect, nearplane, farplane);
         setcamprojmatrix();
 
         glEnable(GL_CULL_FACE);
@@ -2384,10 +2457,14 @@ void gl_drawview()
 
     farplane = worldsize*2;
 
-    if(vr::isenabled()) projmatrix = vr::getviewprojection();
-    else projmatrix.perspective(fovy, aspect, nearplane, farplane);
+    loopi(renderinstances)
+    {
+        if(vr::isenabled()) projmatrix[i] = vr::getviewprojection(/* TODO: viewindex here */);
+        else projmatrix[i].perspective(fovy, aspect, nearplane, farplane);
+    }
     setcamprojmatrix();
 
+    glEnable(GL_CLIP_DISTANCE0);
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
 
@@ -2471,6 +2548,8 @@ void gl_drawview()
     doaa(setuppostfx(vieww, viewh, scalefbo), processhdr);
     renderpostfx(scalefbo);
     if(scalefbo) doscale();
+
+    glDisable(GL_CLIP_DISTANCE0);
 }
 
 void gl_drawmainmenu()
@@ -2808,7 +2887,7 @@ void gl_drawframe()
     synctimers();
     xtravertsva = xtraverts = glde = gbatches = vtris = vverts = 0;
     flipqueries();
-    aspect = forceaspect ? forceaspect : hudw/float(hudh);
+    aspect = forceaspect ? forceaspect : (hudw)/float(hudh);
     fovy = 2*atan2(tan(curfov/2*RAD), aspect)/RAD;
     vieww = hudw;
     viewh = hudh;

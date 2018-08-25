@@ -1,4 +1,5 @@
 #include "cube.h"
+#include "engine.h"
 
 extern int glversion;
 extern int intel_mapbufferrange_bug;
@@ -86,7 +87,7 @@ namespace gle
         if(count <= 0) return;
         if(glversion < 300)
         {
-            glDrawArrays(GL_QUADS, offset*4, count*4);
+            glDrawArraysInstanced_(GL_QUADS, offset*4, count*4, renderinstances);
             return;
         }
         if(offset + count > MAXQUADS)
@@ -94,7 +95,7 @@ namespace gle
             if(offset >= MAXQUADS) return;
             count = MAXQUADS - offset;
         }
-        glDrawRangeElements_(GL_TRIANGLES, offset*4, (offset + count)*4-1, count*6, GL_UNSIGNED_SHORT, (ushort *)0 + offset*6);
+        glDrawElementsInstanced_(GL_TRIANGLES, count*6, GL_UNSIGNED_SHORT, (ushort *)0 + offset*6, renderinstances);
     }
 
     void defattrib(int type, int size, int format)
@@ -301,12 +302,24 @@ namespace gle
             if(multidrawstart.length())
             {
                 multidraw();
-                if(start) loopv(multidrawstart) multidrawstart[i] += start;
-                glMultiDrawArrays_(primtype, multidrawstart.getbuf(), multidrawcount.getbuf(), multidrawstart.length());
+                if(renderinstances > 1)
+                {
+                    loopv(multidrawstart)
+                    {
+                        if(start) multidrawstart[i] += start;
+                        // TODO: Reduce the amount of drawcalls
+                        glDrawArraysInstanced_(primtype, multidrawstart[i], multidrawcount[i], renderinstances);
+                    }
+                }
+                else
+                {
+                    if(start) loopv(multidrawstart) multidrawstart[i] += start;
+                    glMultiDrawArrays_(primtype, multidrawstart.getbuf(), multidrawcount.getbuf(), multidrawstart.length());
+                }
                 multidrawstart.setsize(0);
                 multidrawcount.setsize(0);
             }
-            else glDrawArrays(primtype, start, numvertexes);
+            else glDrawArraysInstanced_(primtype, start, numvertexes, renderinstances);
         }
         attribbuf.reset(attribdata, MAXVBOSIZE);
         return numvertexes;

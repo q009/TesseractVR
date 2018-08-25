@@ -659,6 +659,10 @@ typedef void (APIENTRYP PFNGLBINDBUFFERRANGEPROC) (GLenum target, GLuint index, 
 typedef void (APIENTRYP PFNGLBINDBUFFERBASEPROC) (GLenum target, GLuint index, GLuint buffer);
 #endif
 
+// OpenGL 3.1
+extern PFNGLDRAWELEMENTSINSTANCEDPROC glDrawElementsInstanced_;
+extern PFNGLDRAWARRAYSINSTANCEDPROC   glDrawArraysInstanced_;
+
 extern PFNGLGETSTRINGIPROC glGetStringi_;
 extern PFNGLBINDBUFFERBASEPROC glBindBufferBase_;
 extern PFNGLBINDBUFFERRANGEPROC glBindBufferRange_;

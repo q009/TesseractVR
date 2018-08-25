@@ -120,6 +120,8 @@ static inline bool pvsoccluded(const ivec &bborigin, int size)
 }
 
 // rendergl
+#define RENDER_MAX_INSTANCES 2
+extern int renderinstances;
 extern bool hasVAO, hasTR, hasTSW, hasPBO, hasFBO, hasAFBO, hasDS, hasTF, hasCBF, hasS3TC, hasFXT1, hasLATC, hasRGTC, hasAF, hasFBB, hasFBMS, hasTMS, hasMSS, hasFBMSBS, hasUBO, hasMBR, hasDB2, hasDBB, hasTG, hasTQ, hasPF, hasTRG, hasTI, hasHFV, hasHFP, hasDBT, hasDC, hasDBGO, hasEGPU4, hasGPU4, hasGPU5, hasBFE, hasEAL, hasCR, hasOQ2, hasES3, hasCB, hasCI;
 extern int glversion, glslversion, glcompat;
 extern int maxdrawbufs, maxdualdrawbufs;
@@ -135,7 +137,7 @@ extern bool hdrfloat;
 extern float ldrscale, ldrscaleb;
 extern int drawtex;
 extern const matrix4 viewmatrix, invviewmatrix;
-extern matrix4 cammatrix, projmatrix, camprojmatrix, invcammatrix, invcamprojmatrix, invprojmatrix;
+extern matrix4 cammatrix, projmatrix[RENDER_MAX_INSTANCES], camprojmatrix[RENDER_MAX_INSTANCES], invcammatrix, invcamprojmatrix[RENDER_MAX_INSTANCES], invprojmatrix[RENDER_MAX_INSTANCES];
 extern int fog;
 extern bvec fogcolour;
 extern vec curfogcolor;
@@ -178,6 +180,7 @@ extern float calcfogdensity(float dist);
 extern float calcfogcull();
 extern void writecrosshairs(stream *f);
 extern void renderavatar();
+extern matrix4 getviewproj(int instance);
 
 namespace modelpreview
 {
@@ -325,7 +328,7 @@ static inline bool bbinsidespot(const vec &origin, const vec &dir, int spot, con
     return sphereinsidespot(dir, spot, center.sub(origin), radius.magnitude());
 }
 
-extern matrix4 worldmatrix, screenmatrix;
+extern matrix4 worldmatrix[RENDER_MAX_INSTANCES], screenmatrix;
 
 extern int transparentlayer;
 
@@ -365,7 +368,7 @@ extern void enableavatarmask();
 extern void disableavatarmask();
 
 // aa
-extern matrix4 nojittermatrix;
+extern matrix4 nojittermatrix[RENDER_MAX_INSTANCES];
 
 extern void setupaa(int w, int h);
 extern void jitteraa();

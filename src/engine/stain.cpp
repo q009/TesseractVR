@@ -137,7 +137,7 @@ struct stainbuffer
         gle::texcoord0pointer(sizeof(stainvert), ptr->tc.v);
         gle::colorpointer(sizeof(stainvert), ptr->color.v);
 
-        glDrawArrays(GL_TRIANGLES, 0, count);
+        glDrawArraysInstanced_(GL_TRIANGLES, 0, count, renderinstances);
         xtravertsva += count;
     }
 

@@ -359,7 +359,7 @@ struct skelmodel : animmodel
         void render(const animstate *as, skin &s, vbocacheentry &vc)
         {
             if(!Shader::lastshader) return;
-            glDrawRangeElements_(GL_TRIANGLES, minvert, maxvert, elen, GL_UNSIGNED_SHORT, &((skelmeshgroup *)group)->edata[eoffset]);
+            glDrawElementsInstanced_(GL_TRIANGLES, elen, GL_UNSIGNED_SHORT, &((skelmeshgroup *)group)->edata[eoffset], renderinstances);
             glde++;
             xtravertsva += numverts;
         }

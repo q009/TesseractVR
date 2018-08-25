@@ -14,7 +14,7 @@ GLuint msfbo = 0, msdepthtex = 0, mscolortex = 0, msnormaltex = 0, msglowtex = 0
 vector<vec2> msaapositions;
 int aow = -1, aoh = -1;
 GLuint aofbo[4] = { 0, 0, 0, 0 }, aotex[4] = { 0, 0, 0, 0 }, aonoisetex = 0;
-matrix4 eyematrix, worldmatrix, linearworldmatrix, screenmatrix;
+matrix4 eyematrix, worldmatrix[RENDER_MAX_INSTANCES], linearworldmatrix[RENDER_MAX_INSTANCES], screenmatrix;
 
 extern int amd_pf_bug;
 
@@ -1689,6 +1689,8 @@ struct shadowcache : hashtable<shadowcachekey, shadowcacheval>
     }
 };
 
+struct shadowcache;
+
 extern int smcache, smfilter, smgather;
 
 #define SHADOWCACHE_EVICT 2
@@ -2713,7 +2715,7 @@ namespace lightsphere
 
     void draw()
     {
-        glDrawRangeElements_(GL_TRIANGLES, 0, numverts-1, numindices, GL_UNSIGNED_SHORT, indices);
+        glDrawElementsInstanced_(GL_TRIANGLES, numindices, GL_UNSIGNED_SHORT, indices, renderinstances);
         xtraverts += numindices;
         glde++;
     }
@@ -2861,9 +2863,9 @@ static inline void setlightglobals(bool transparent = false)
         }
     }
 
-    matrix4 lightmatrix;
-    lightmatrix.identity();
-    GLOBALPARAM(lightmatrix, lightmatrix);
+    matrix4 lightmatrix[RENDER_MAX_INSTANCES];
+    loopi(RENDER_MAX_INSTANCES) lightmatrix[i].identity();
+    GLOBALPARAMV(lightmatrix, lightmatrix, RENDER_MAX_INSTANCES);
 }
 
 static LocalShaderParam lightpos("lightpos"), lightcolor("lightcolor"), spotparams("spotparams"), shadowparams("shadowparams"), shadowoffset("shadowoffset");
@@ -2959,10 +2961,14 @@ static void renderlightsnobatch(Shader *s, int stencilref, bool transparent, flo
                   sx2 = min(bsx2, l.sx2), sy2 = min(bsy2, l.sy2);
             if(sx1 >= sx2 || sy1 >= sy2 || l.sz1 >= l.sz2 || (avatarpass && l.dist - l.radius > avatarshadowdist)) continue;
 
-            matrix4 lightmatrix = camprojmatrix;
-            lightmatrix.translate(l.o);
-            lightmatrix.scale(l.radius*lightradiustweak);
-            GLOBALPARAM(lightmatrix, lightmatrix);
+            matrix4 lightmatrix[RENDER_MAX_INSTANCES];
+            loopi(RENDER_MAX_INSTANCES)
+            {
+                lightmatrix[i] = camprojmatrix[i];
+                lightmatrix[i].translate(l.o);
+                lightmatrix[i].scale(l.radius*lightradiustweak);
+            }
+            GLOBALPARAMV(lightmatrix, lightmatrix, RENDER_MAX_INSTANCES);
 
             setlightparams(0, l);
             setlightshader(s, 1, false, l.shadowmap >= 0, l.spot > 0, transparent, avatarpass > 0);
@@ -3250,10 +3256,14 @@ void rendervolumetric()
         const lightinfo &l = lights[lightorder[i]];
         if(!l.volumetric() || l.checkquery()) continue;
 
-        matrix4 lightmatrix = camprojmatrix;
-        lightmatrix.translate(l.o);
-        lightmatrix.scale(l.radius*lightradiustweak);
-        GLOBALPARAM(lightmatrix, lightmatrix);
+        matrix4 lightmatrix[RENDER_MAX_INSTANCES];
+        loopi(RENDER_MAX_INSTANCES)
+        {
+            lightmatrix[i] = camprojmatrix[i];
+            lightmatrix[i].translate(l.o);
+            lightmatrix[i].scale(l.radius*lightradiustweak);
+        }
+        GLOBALPARAMV(lightmatrix, lightmatrix, RENDER_MAX_INSTANCES);
 
         if(l.spot > 0)
         {
@@ -4593,11 +4603,18 @@ void rendertransparent()
 
     if(ghasstencil) glEnable(GL_STENCIL_TEST);
 
-    matrix4 raymatrix(vec(-0.5f*vieww*projmatrix.a.x, 0, 0.5f*vieww - 0.5f*vieww*projmatrix.c.x),
-                      vec(0, -0.5f*viewh*projmatrix.b.y, 0.5f*viewh - 0.5f*viewh*projmatrix.c.y));
-    raymatrix.muld(cammatrix);
-    GLOBALPARAM(raymatrix, raymatrix);
-    GLOBALPARAM(linearworldmatrix, linearworldmatrix);
+    float rayw = 0.5f / renderinstances;
+    matrix4 raymatrix[RENDER_MAX_INSTANCES];
+    loopi(RENDER_MAX_INSTANCES)
+    {
+        raymatrix[i] = matrix4(vec(-0.5f*vieww*projmatrix[i].a.x, 0, rayw*vieww - rayw*vieww*projmatrix[i].c.x),
+                               vec(0, -0.5f*viewh*projmatrix[i].b.y, 0.5f*viewh - 0.5f*viewh*projmatrix[i].c.y));
+
+        raymatrix[i].muld(cammatrix);
+    }
+
+    GLOBALPARAMV(raymatrix, raymatrix, RENDER_MAX_INSTANCES);
+    GLOBALPARAMV(linearworldmatrix, linearworldmatrix, RENDER_MAX_INSTANCES);
 
     uint tiles[LIGHTTILE_MAXH];
     float allsx1 = 1, allsy1 = 1, allsx2 = -1, allsy2 = -1, sx1, sy1, sx2, sy2;
@@ -4776,41 +4793,55 @@ void preparegbuffer(bool depthclear)
     invscreenmatrix.identity();
     invscreenmatrix.settranslation(-1.0f, -1.0f, -1.0f);
     invscreenmatrix.setscale(2.0f/vieww, 2.0f/viewh, 2.0f);
-    eyematrix.muld(invprojmatrix, invscreenmatrix);
+
+    eyematrix.muld(invprojmatrix[0], invscreenmatrix);
     if(drawtex == DRAWTEX_MINIMAP)
     {
-        linearworldmatrix.muld(invcamprojmatrix, invscreenmatrix);
-        if(!gdepthformat) worldmatrix = linearworldmatrix;
-        linearworldmatrix.a.z = invcammatrix.a.z;
-        linearworldmatrix.b.z = invcammatrix.b.z;
-        linearworldmatrix.c.z = invcammatrix.c.z;
-        linearworldmatrix.d.z = invcammatrix.d.z;
-        if(gdepthformat) worldmatrix = linearworldmatrix;
+        linearworldmatrix[0].muld(invcamprojmatrix[0], invscreenmatrix);
+        if(!gdepthformat) loopi(RENDER_MAX_INSTANCES) worldmatrix[i] = linearworldmatrix[i];
+        linearworldmatrix[0].a.z = invcammatrix.a.z;
+        linearworldmatrix[0].b.z = invcammatrix.b.z;
+        linearworldmatrix[0].c.z = invcammatrix.c.z;
+        linearworldmatrix[0].d.z = invcammatrix.d.z;
+        if(gdepthformat) loopi(RENDER_MAX_INSTANCES) worldmatrix[i] = linearworldmatrix[i];
 
         GLOBALPARAMF(radialfogscale, 0, 0, 0, 0);
     }
     else
     {
-        float xscale = eyematrix.a.x, yscale = eyematrix.b.y, xoffset = eyematrix.d.x, yoffset = eyematrix.d.y, zscale = eyematrix.d.z;
-        matrix4 depthmatrix(vec(xscale/zscale, 0, xoffset/zscale), vec(0, yscale/zscale, yoffset/zscale));
-        linearworldmatrix.muld(invcammatrix, depthmatrix);
-        if(gdepthformat) worldmatrix = linearworldmatrix;
-        else worldmatrix.muld(invcamprojmatrix, invscreenmatrix);
+        matrix4 eyeprojshift[RENDER_MAX_INSTANCES];
+        matrix4 depthmatrix[RENDER_MAX_INSTANCES];
+        vec4 radialfogscale[RENDER_MAX_INSTANCES];
+        loopi(RENDER_MAX_INSTANCES)
+        {
+            matrix4 invproj;
+            invproj.invert(getviewproj(i));
+            eyeprojshift[i].muld(invproj, invscreenmatrix);
 
-        GLOBALPARAMF(radialfogscale, xscale/zscale, yscale/zscale, xoffset/zscale, yoffset/zscale);
+            float xscale = eyeprojshift[i].a.x, yscale = eyeprojshift[i].b.y, xoffset = eyeprojshift[i].d.x, yoffset = eyeprojshift[i].d.y, zscale = eyeprojshift[i].d.z;
+            depthmatrix[i] = matrix4(vec(xscale/zscale, 0, xoffset/zscale), vec(0, yscale/zscale, yoffset/zscale));
+            linearworldmatrix[i].muld(invcammatrix, depthmatrix[i]);
+
+            radialfogscale[i] = vec4(xscale/zscale, yscale/zscale, xoffset/zscale, yoffset/zscale);
+        }
+
+        if(gdepthformat) loopi(RENDER_MAX_INSTANCES) worldmatrix[i] = linearworldmatrix[i];
+        else loopi(RENDER_MAX_INSTANCES) worldmatrix[i].muld(invcamprojmatrix[i], invscreenmatrix);
+
+        GLOBALPARAMV(radialfogscale, radialfogscale, RENDER_MAX_INSTANCES);
     }
 
     screenmatrix.identity();
     screenmatrix.settranslation(0.5f*vieww, 0.5f*viewh, 0.5f);
     screenmatrix.setscale(0.5f*vieww, 0.5f*viewh, 0.5f);
-    screenmatrix.muld(camprojmatrix);
+    screenmatrix.muld(camprojmatrix[0]);
 
     GLOBALPARAMF(viewsize, vieww, viewh, 1.0f/vieww, 1.0f/viewh);
     GLOBALPARAMF(gdepthscale, eyematrix.d.z, eyematrix.c.w, eyematrix.d.w);
     GLOBALPARAMF(gdepthinvscale, eyematrix.d.z / eyematrix.c.w, eyematrix.d.w / eyematrix.c.w);
     GLOBALPARAMF(gdepthpackparams, -1.0f/farplane, -255.0f/farplane, -(255.0f*255.0f)/farplane);
     GLOBALPARAMF(gdepthunpackparams, -farplane, -farplane/255.0f, -farplane/(255.0f*255.0f));
-    GLOBALPARAM(worldmatrix, worldmatrix);
+    GLOBALPARAMV(worldmatrix, worldmatrix, RENDER_MAX_INSTANCES);
 
     GLOBALPARAMF(ldrscale, ldrscale);
     GLOBALPARAMF(hdrgamma, hdrgamma, 1.0f/hdrgamma);

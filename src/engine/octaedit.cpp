@@ -1428,21 +1428,21 @@ static void renderprefab(prefab &p, const vec &o, float yaw, float pitch, float 
     gle::normalpointer(sizeof(prefabmesh::vertex), v->norm.v, GL_BYTE);
 
     matrix4 pm;
-    pm.mul(camprojmatrix, m);
+    pm.mul(camprojmatrix[0], m);
     GLOBALPARAM(prefabmatrix, pm);
     GLOBALPARAM(prefabworld, w);
     SETSHADER(prefab);
     gle::color(vec(color).mul(ldrscale));
-    glDrawRangeElements_(GL_TRIANGLES, 0, p.numverts-1, p.numtris*3, GL_UNSIGNED_SHORT, (ushort *)0);
+    glDrawElementsInstanced_(GL_TRIANGLES, p.numtris*3, GL_UNSIGNED_SHORT, (ushort *)0, renderinstances);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     enablepolygonoffset(GL_POLYGON_OFFSET_LINE);
 
-    pm.mul(camprojmatrix, m);
+    pm.mul(camprojmatrix[0], m);
     GLOBALPARAM(prefabmatrix, pm);
     SETSHADER(prefab);
     gle::color((outlinecolour).tocolor().mul(ldrscale));
-    glDrawRangeElements_(GL_TRIANGLES, 0, p.numverts-1, p.numtris*3, GL_UNSIGNED_SHORT, (ushort *)0);
+    glDrawElementsInstanced_(GL_TRIANGLES, p.numtris*3, GL_UNSIGNED_SHORT, (ushort *)0, renderinstances);
 
     disablepolygonoffset(GL_POLYGON_OFFSET_LINE);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

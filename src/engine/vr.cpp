@@ -55,6 +55,7 @@ static void initscreen()
 
 void vr::init()
 {
+    return;
     if(!vrc) vrc = new vrcontext;
 
 #ifdef VR_OPENVR

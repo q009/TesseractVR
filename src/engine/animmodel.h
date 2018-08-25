@@ -1002,10 +1002,13 @@ struct animmodel : model
 
             if(!(anim&ANIM_NORENDER))
             {
-                matrix4 modelmatrix;
-                modelmatrix.mul(shadowmapping ? shadowmatrix : camprojmatrix, matrixstack[matrixpos]);
-                if(resize!=1) modelmatrix.scale(resize);
-                GLOBALPARAM(modelmatrix, modelmatrix);
+                matrix4 modelmatrix[RENDER_MAX_INSTANCES];
+                loopi(RENDER_MAX_INSTANCES)
+                {
+                    modelmatrix[i].mul(shadowmapping ? shadowmatrix : camprojmatrix[i], matrixstack[matrixpos]);
+                    if(resize!=1) modelmatrix[i].scale(resize);
+                }
+                GLOBALPARAMV(modelmatrix, modelmatrix, RENDER_MAX_INSTANCES);
 
                 if(!(anim&ANIM_NOSKIN))
                 {

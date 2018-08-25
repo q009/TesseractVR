@@ -46,12 +46,18 @@ void setupcaustics(int tmu, float surface = -1e16f)
     if(surface > -1e15f)
     {
         float bz = surface + camera1->o.z + (vertwater ? WATER_AMPLITUDE : 0);
-        matrix4 m(vec4(s.x, t.x,  0, 0),
-                  vec4(s.y, t.y,  0, 0),
-                  vec4(s.z, t.z, -1, 0),
-                  vec4(  0,   0, bz, 1));
-        m.mul(worldmatrix);
-        GLOBALPARAM(causticsmatrix, m);
+        matrix4 m[RENDER_MAX_INSTANCES];
+        loopi(RENDER_MAX_INSTANCES)
+        {
+            m[i] = matrix4(vec4(s.x, t.x,  0, 0),
+                           vec4(s.y, t.y,  0, 0),
+                           vec4(s.z, t.z, -1, 0),
+                           vec4(  0,   0, bz, 1));
+
+            m[i].mul(worldmatrix[i]);
+        }
+
+        GLOBALPARAMV(causticsmatrix, m, RENDER_MAX_INSTANCES);
         blendscale *= 0.5f;
         blendoffset = 0;
     }
@@ -93,10 +99,10 @@ void renderwaterfog(int mat, float surface)
 
     vec p[4] =
     {
-        invcamprojmatrix.perspectivetransform(vec(-1, -1, -1)),
-        invcamprojmatrix.perspectivetransform(vec(-1, 1, -1)),
-        invcamprojmatrix.perspectivetransform(vec(1, -1, -1)),
-        invcamprojmatrix.perspectivetransform(vec(1, 1, -1))
+        invcamprojmatrix[0].perspectivetransform(vec(-1, -1, -1)),
+        invcamprojmatrix[0].perspectivetransform(vec(-1, 1, -1)),
+        invcamprojmatrix[0].perspectivetransform(vec(1, -1, -1)),
+        invcamprojmatrix[0].perspectivetransform(vec(1, 1, -1))
     };
     float bz = surface + camera1->o.z + (vertwater ? WATER_AMPLITUDE : 0),
           syl = p[1].z > p[0].z ? 2*(bz - p[0].z)/(p[1].z - p[0].z) - 1 : 1,

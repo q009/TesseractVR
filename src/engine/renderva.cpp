@@ -4,7 +4,7 @@
 
 static inline void drawtris(GLsizei numindices, const GLvoid *indices, ushort minvert, ushort maxvert)
 {
-    glDrawRangeElements_(GL_TRIANGLES, minvert, maxvert, numindices, GL_UNSIGNED_SHORT, indices);
+    glDrawElementsInstanced_(GL_TRIANGLES, numindices, GL_UNSIGNED_SHORT, indices, renderinstances);
     glde++;
 }
 
@@ -202,7 +202,7 @@ void calcvfcD()
 
 void setvfcP(const vec &bbmin, const vec &bbmax)
 {
-    vec4 px = camprojmatrix.rowx(), py = camprojmatrix.rowy(), pz = camprojmatrix.rowz(), pw = camprojmatrix.roww();
+    vec4 px = camprojmatrix[0].rowx(), py = camprojmatrix[0].rowy(), pz = camprojmatrix[0].rowz(), pw = camprojmatrix[0].roww();
     vfcP[0] = plane(vec4(pw).mul(-bbmin.x).add(px)).normalize(); // left plane
     vfcP[1] = plane(vec4(pw).mul(bbmax.x).sub(px)).normalize(); // right plane
     vfcP[2] = plane(vec4(pw).mul(-bbmin.y).add(py)).normalize(); // bottom plane
@@ -449,7 +449,7 @@ void drawbb(const ivec &bo, const ivec &br)
 {
     LOCALPARAMF(bborigin, bo.x, bo.y, bo.z);
     LOCALPARAMF(bbsize, br.x, br.y, br.z);
-    glDrawRangeElements_(GL_TRIANGLES, 0, 8-1, 3*2*6, GL_UNSIGNED_SHORT, (ushort *)0);
+    glDrawElementsInstanced_(GL_TRIANGLES, 3*2*6, GL_UNSIGNED_SHORT, (ushort *)0, renderinstances);
     xtraverts += 8;
 }
 

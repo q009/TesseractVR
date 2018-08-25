@@ -54,9 +54,9 @@ struct GlobalShaderParamUse : ShaderParamBinding
             case GL_UNSIGNED_INT_VEC2: glUniform2uiv_(loc, size, param->uval); break;
             case GL_UNSIGNED_INT_VEC3: glUniform3uiv_(loc, size, param->uval); break;
             case GL_UNSIGNED_INT_VEC4: glUniform4uiv_(loc, size, param->uval); break;
-            case GL_FLOAT_MAT2: glUniformMatrix2fv_(loc, 1, GL_FALSE, param->fval); break;
-            case GL_FLOAT_MAT3: glUniformMatrix3fv_(loc, 1, GL_FALSE, param->fval); break;
-            case GL_FLOAT_MAT4: glUniformMatrix4fv_(loc, 1, GL_FALSE, param->fval); break;
+            case GL_FLOAT_MAT2: glUniformMatrix2fv_(loc, min(size, int(sizeof(param->buf) / sizeof(matrix2))), GL_FALSE, param->fval); break;
+            case GL_FLOAT_MAT3: glUniformMatrix3fv_(loc, min(size, int(sizeof(param->buf) / sizeof(matrix3))), GL_FALSE, param->fval); break;
+            case GL_FLOAT_MAT4: glUniformMatrix4fv_(loc, min(size, int(sizeof(param->buf) / sizeof(matrix4))), GL_FALSE, param->fval); break;
         }
         version = param->version;
     }
