@@ -1313,6 +1313,17 @@ void viewdepth()
     debugquad(0, 0, w, h, 0, 0, gw, gh);
 }
 
+VAR(debugnormal, 0, 0, 1);
+
+void viewnormal()
+{
+    int w = min(hudw, hudh)/2, h = (w*hudh)/hudw;
+    SETSHADER(hudrect);
+    gle::colorf(1, 1, 1);
+    glBindTexture(GL_TEXTURE_RECTANGLE, gnormaltex);
+    debugquad(0, 0, w, h, 0, 0, gw, gh);
+}
+
 VAR(debugstencil, 0, 0, 0xFF);
 
 void viewstencil()
@@ -1688,8 +1699,6 @@ struct shadowcache : hashtable<shadowcachekey, shadowcacheval>
         clear();
     }
 };
-
-struct shadowcache;
 
 extern int smcache, smfilter, smgather;
 
@@ -5006,6 +5015,7 @@ bool debuglights()
     if(debugshadowatlas) viewshadowatlas();
     else if(debugao) viewao();
     else if(debugdepth) viewdepth();
+    else if(debugnormal) viewnormal();
     else if(debugstencil) viewstencil();
     else if(debugrefract) viewrefract();
     else if(debuglightscissor) viewlightscissor();
