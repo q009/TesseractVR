@@ -14,7 +14,7 @@ GLuint msfbo = 0, msdepthtex = 0, mscolortex = 0, msnormaltex = 0, msglowtex = 0
 vector<vec2> msaapositions;
 int aow = -1, aoh = -1;
 GLuint aofbo[4] = { 0, 0, 0, 0 }, aotex[4] = { 0, 0, 0, 0 }, aonoisetex = 0;
-matrix4 eyematrix, worldmatrix[RENDER_MAX_INSTANCES], linearworldmatrix[RENDER_MAX_INSTANCES], screenmatrix;
+matrix4 eyematrix, worldmatrix[RENDER_MAX_INSTANCES], linearworldmatrix[RENDER_MAX_INSTANCES], screenmatrix[RENDER_MAX_INSTANCES];
 
 extern int amd_pf_bug;
 
@@ -4840,10 +4840,13 @@ void preparegbuffer(bool depthclear)
         GLOBALPARAMV(radialfogscale, radialfogscale, RENDER_MAX_INSTANCES);
     }
 
-    screenmatrix.identity();
-    screenmatrix.settranslation(0.5f*vieww, 0.5f*viewh, 0.5f);
-    screenmatrix.setscale(0.5f*vieww, 0.5f*viewh, 0.5f);
-    screenmatrix.muld(camprojmatrix[0]);
+    loopi(RENDER_MAX_INSTANCES)
+    {
+        screenmatrix[i].identity();
+        screenmatrix[i].settranslation(0.5f*vieww, 0.5f*viewh, 0.5f);
+        screenmatrix[i].setscale(0.5f*vieww, 0.5f*viewh, 0.5f);
+        screenmatrix[i].muld(camprojmatrix[i]);
+    }
 
     GLOBALPARAMF(viewsize, vieww, viewh, 1.0f/vieww, 1.0f/viewh);
     GLOBALPARAMF(gdepthscale, eyematrix.d.z, eyematrix.c.w, eyematrix.d.w);

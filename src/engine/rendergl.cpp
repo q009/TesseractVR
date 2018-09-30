@@ -2,16 +2,23 @@
 
 #include "engine.h"
 
-int renderinstances = 2;
-
 bool hasVAO = false, hasTR = false, hasTSW = false, hasPBO = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasUBO = false, hasMBR = false, hasDB2 = false, hasDBB = false, hasTG = false, hasTQ = false, hasPF = false, hasTRG = false, hasTI = false, hasHFV = false, hasHFP = false, hasDBT = false, hasDC = false, hasDBGO = false, hasEGPU4 = false, hasGPU4 = false, hasGPU5 = false, hasBFE = false, hasEAL = false, hasCR = false, hasOQ2 = false, hasES3 = false, hasCB = false, hasCI = false;
 bool mesa = false, intel = false, amd = false, nvidia = false;
+
+int renderinstances = 1;
+bool renderinstancesrdy = false;
 
 int hasstencil = 0;
 
 VAR(glversion, 1, 0, 0);
 VAR(glslversion, 1, 0, 0);
 VAR(glcompat, 1, 0, 0);
+
+VARFP(instancedstereo, 0, 0, 1, {
+    renderinstances = instancedstereo ? 2 : 1;
+    initwarning("Instanced stereo rendering", INIT_LOAD, CHANGE_SHADERS);
+});
+ICOMMAND(renderstereo, "", (), intret(renderinstances == 2 ? 2 : 1));
 
 // GL_EXT_timer_query
 PFNGLGETQUERYOBJECTI64VEXTPROC glGetQueryObjecti64v_  = NULL;
@@ -1268,8 +1275,11 @@ void setcammatrix()
 
 matrix4 getviewproj(int instance)
 {
+    if(!instancedstereo) return projmatrix[0];
+
     matrix4 proj = projmatrix[instance];
     proj.jitter(instance ? 0.5f : -0.5f, 0);
+
     return proj;
 }
 
@@ -1851,13 +1861,13 @@ static void cleanupscreenquad()
     if(screenquadvbo) { glDeleteBuffers_(1, &screenquadvbo); screenquadvbo = 0; }
 }
 
-void screenquad()
+void screenquad(bool instanced)
 {
     setupscreenquad();
     gle::bindvbo(screenquadvbo);
     gle::enablevertex();
     gle::vertexpointer(sizeof(vec2), (const vec2 *)0, GL_FLOAT, 2);
-    glDrawArraysInstanced_(GL_TRIANGLE_STRIP, 0, 4, renderinstances);
+    glDrawArraysInstanced_(GL_TRIANGLE_STRIP, 0, 4, instanced ? renderinstances : 1);
     gle::disablevertex();
     gle::clearvbo();
 }
@@ -1869,36 +1879,36 @@ static inline void setscreentexcoord(int i, float w, float h, float x = 0, float
     screentexcoord[i].setf(w*0.5f, h*0.5f, x + w*0.5f, y + fabs(h)*0.5f);
 }
 
-void screenquad(float sw, float sh)
+void screenquad(float sw, float sh, bool instanced)
 {
     setscreentexcoord(0, sw, sh);
-    screenquad();
+    screenquad(instanced);
 }
 
-void screenquadflipped(float sw, float sh)
+void screenquadflipped(float sw, float sh, bool instanced)
 {
     setscreentexcoord(0, sw, -sh);
-    screenquad();
+    screenquad(instanced);
 }
 
-void screenquad(float sw, float sh, float sw2, float sh2)
+void screenquad(float sw, float sh, float sw2, float sh2, bool instanced)
 {
     setscreentexcoord(0, sw, sh);
     setscreentexcoord(1, sw2, sh2);
-    screenquad();
+    screenquad(instanced);
 }
 
-void screenquadoffset(float x, float y, float w, float h)
+void screenquadoffset(float x, float y, float w, float h, bool instanced)
 {
     setscreentexcoord(0, w, h, x, y);
-    screenquad();
+    screenquad(instanced);
 }
 
-void screenquadoffset(float x, float y, float w, float h, float x2, float y2, float w2, float h2)
+void screenquadoffset(float x, float y, float w, float h, float x2, float y2, float w2, float h2, bool instanced)
 {
     setscreentexcoord(0, w, h, x, y);
     setscreentexcoord(1, w2, h2, x2, y2);
-    screenquad();
+    screenquad(instanced);
 }
 
 #define HUDQUAD(x1, y1, x2, y2, sx1, sy1, sx2, sy2) { \

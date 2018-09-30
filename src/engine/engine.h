@@ -163,12 +163,12 @@ extern void disablepolygonoffset(GLenum type);
 extern bool calcspherescissor(const vec &center, float size, float &sx1, float &sy1, float &sx2, float &sy2, float &sz1, float &sz2);
 extern bool calcbbscissor(const ivec &bbmin, const ivec &bbmax, float &sx1, float &sy1, float &sx2, float &sy2);
 extern bool calcspotscissor(const vec &origin, float radius, const vec &dir, int spot, const vec &spotx, const vec &spoty, float &sx1, float &sy1, float &sx2, float &sy2, float &sz1, float &sz2);
-extern void screenquad();
-extern void screenquad(float sw, float sh);
-extern void screenquadflipped(float sw, float sh);
-extern void screenquad(float sw, float sh, float sw2, float sh2);
-extern void screenquadoffset(float x, float y, float w, float h);
-extern void screenquadoffset(float x, float y, float w, float h, float x2, float y2, float w2, float h2);
+extern void screenquad(bool instanced = false);
+extern void screenquad(float sw, float sh, bool instanced = false);
+extern void screenquadflipped(float sw, float sh, bool instanced = false);
+extern void screenquad(float sw, float sh, float sw2, float sh2, bool instanced = false);
+extern void screenquadoffset(float x, float y, float w, float h, bool instanced = false);
+extern void screenquadoffset(float x, float y, float w, float h, float x2, float y2, float w2, float h2, bool instanced = false);
 extern void hudquad(float x, float y, float w, float h, float tx = 0, float ty = 0, float tw = 1, float th = 1);
 extern void debugquad(float x, float y, float w, float h, float tx = 0, float ty = 0, float tw = 1, float th = 1);
 extern void recomputecamera();
@@ -328,7 +328,7 @@ static inline bool bbinsidespot(const vec &origin, const vec &dir, int spot, con
     return sphereinsidespot(dir, spot, center.sub(origin), radius.magnitude());
 }
 
-extern matrix4 worldmatrix[RENDER_MAX_INSTANCES], screenmatrix;
+extern matrix4 worldmatrix[RENDER_MAX_INSTANCES], screenmatrix[RENDER_MAX_INSTANCES];
 
 extern int transparentlayer;
 

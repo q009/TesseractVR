@@ -12,7 +12,7 @@ VAR(tqaaresolvegather, 1, 0, 0);
 
 int tqaaframe = 0;
 GLuint tqaatex[2] = { 0, 0 }, tqaafbo[2] = { 0, 0 };
-matrix4 tqaaprevscreenmatrix;
+matrix4 tqaaprevscreenmatrix[RENDER_MAX_INSTANCES];
 
 int tqaatype = -1;
 
@@ -39,7 +39,7 @@ void setuptqaa(int w, int h)
     }
     glBindFramebuffer_(GL_FRAMEBUFFER, 0);
 
-    tqaaprevscreenmatrix.identity();
+    loopi(RENDER_MAX_INSTANCES) tqaaprevscreenmatrix[i].identity();
 
     loadtqaashaders();
 }
@@ -62,12 +62,15 @@ void setaavelocityparams(GLenum tmu)
     else glBindTexture(GL_TEXTURE_RECTANGLE, gnormaltex);
     glActiveTexture_(GL_TEXTURE0);
 
-    matrix4 reproject;
+    matrix4 reproject[RENDER_MAX_INSTANCES];
     vec2 jitter = tqaaframe&1 ? vec2(0.5f, 0.5f) : vec2(-0.5f, -0.5f);
     if(multisampledaa()) { jitter.x *= 0.5f; jitter.y *= -0.5f; }
-    reproject.muld(tqaaframe ? tqaaprevscreenmatrix : screenmatrix, worldmatrix[0]);
-    if(tqaaframe) reproject.jitter(jitter.x, jitter.y);
-    LOCALPARAM(reprojectmatrix, reproject);
+    loopi(renderinstances)
+    {
+        reproject[i].muld(tqaaframe ? tqaaprevscreenmatrix[i] : screenmatrix[i], worldmatrix[i]);
+        if(tqaaframe) reproject[i].jitter(jitter.x, jitter.y);
+    }
+    LOCALPARAMV(reprojectmatrix, reproject, RENDER_MAX_INSTANCES);
     float maxvel = sqrtf(vieww*vieww + viewh*viewh)/tqaareproject;
     LOCALPARAMF(maxvelocity, maxvel, 1/maxvel);
 }
@@ -101,11 +104,11 @@ void resolvetqaa(GLuint outfbo)
     if(tqaaquincunx) quincunx = tqaaframe&1 ? vec4(0.25f, 0.25f, -0.25f, -0.25f) : vec4(-0.25f, -0.25f, 0.25f, 0.25f);
     if(multisampledaa()) { quincunx.x *= 0.5f; quincunx.y *= -0.5f; quincunx.z *= 0.5f; quincunx.w *= -0.5f; }
     LOCALPARAM(quincunx, quincunx);
-    screenquad(vieww, viewh);
+    screenquad(vieww, viewh, true);
 
     swap(tqaafbo[0], tqaafbo[1]);
     swap(tqaatex[0], tqaatex[1]);
-    tqaaprevscreenmatrix = screenmatrix;
+    loopi(RENDER_MAX_INSTANCES) tqaaprevscreenmatrix[i] = screenmatrix[i];
     tqaaframe++;
 }
 
