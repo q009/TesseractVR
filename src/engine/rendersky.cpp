@@ -352,10 +352,10 @@ static void drawfogdome()
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    matrix4 skymatrix = cammatrix, skyprojmatrix[RENDER_MAX_INSTANCES];
-    skymatrix.settranslation(vec(cammatrix.c).mul(farplane*fogdomeheight*0.5f));
+    matrix4 skymatrix = cammatrix[0], skyprojmatrix[RENDER_MAX_INSTANCES];
+    skymatrix.settranslation(vec(cammatrix[0].c).mul(farplane*fogdomeheight*0.5f));
     skymatrix.scale(farplane/2, farplane/2, farplane*(0.5f - fogdomeheight*0.5f));
-    loopi(RENDER_MAX_INSTANCES) skyprojmatrix[i].mul(getviewproj(i), skymatrix);
+    loopi(RENDER_MAX_INSTANCES) skyprojmatrix[i].mul(projmatrix[i], skymatrix);
     LOCALPARAMV(skymatrix, skyprojmatrix, RENDER_MAX_INSTANCES);
 
     fogdome::draw();
@@ -391,9 +391,9 @@ static void drawatmosphere()
     loopi(RENDER_MAX_INSTANCES)
     {
         matrix4 invproj;
-        invproj.invert(getviewproj(i));
+        invproj.invert(projmatrix[i]);
 
-        sunmatrix[i] = invcammatrix;
+        sunmatrix[i] = invcammatrix[0];
         sunmatrix[i].settranslation(0, 0, 0);
         sunmatrix[i].mul(invproj);
     }
@@ -492,10 +492,10 @@ void drawskybox(bool clear)
 
         gle::color(skyboxcolour);
 
-        matrix4 skymatrix = cammatrix, skyprojmatrix[RENDER_MAX_INSTANCES];
+        matrix4 skymatrix = cammatrix[0], skyprojmatrix[RENDER_MAX_INSTANCES];
         skymatrix.settranslation(0, 0, 0);
         skymatrix.rotate_around_z((spinsky*lastmillis/1000.0f+yawsky)*-RAD);
-        loopi(RENDER_MAX_INSTANCES) skyprojmatrix[i].mul(getviewproj(i), skymatrix);
+        loopi(RENDER_MAX_INSTANCES) skyprojmatrix[i].mul(projmatrix[i], skymatrix);
         
         LOCALPARAMV(skymatrix, skyprojmatrix, RENDER_MAX_INSTANCES);
 
@@ -529,10 +529,10 @@ void drawskybox(bool clear)
 
         gle::color(cloudboxcolour.tocolor(), cloudboxalpha);
 
-        matrix4 skymatrix = cammatrix, skyprojmatrix[RENDER_MAX_INSTANCES];
+        matrix4 skymatrix = cammatrix[0], skyprojmatrix[RENDER_MAX_INSTANCES];
         skymatrix.settranslation(0, 0, 0);
         skymatrix.rotate_around_z((spinclouds*lastmillis/1000.0f+yawclouds)*-RAD);
-        loopi(RENDER_MAX_INSTANCES) skyprojmatrix[i].mul(getviewproj(i), skymatrix);
+        loopi(RENDER_MAX_INSTANCES) skyprojmatrix[i].mul(projmatrix[i], skymatrix);
         LOCALPARAMV(skymatrix, skyprojmatrix, RENDER_MAX_INSTANCES);
 
         drawenvbox(clouds, cloudclip);
@@ -549,10 +549,10 @@ void drawskybox(bool clear)
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        matrix4 skymatrix = cammatrix, skyprojmatrix[RENDER_MAX_INSTANCES];
+        matrix4 skymatrix = cammatrix[0], skyprojmatrix[RENDER_MAX_INSTANCES];
         skymatrix.settranslation(0, 0, 0);
         skymatrix.rotate_around_z((spincloudlayer*lastmillis/1000.0f+yawcloudlayer)*-RAD);
-        loopi(RENDER_MAX_INSTANCES) skyprojmatrix[i].mul(getviewproj(i), skymatrix);
+        loopi(RENDER_MAX_INSTANCES) skyprojmatrix[i].mul(projmatrix[i], skymatrix);
         LOCALPARAMV(skymatrix, skyprojmatrix, RENDER_MAX_INSTANCES);
 
         drawenvoverlay(cloudoverlay, cloudoffsetx + cloudscrollx * lastmillis/1000.0f, cloudoffsety + cloudscrolly * lastmillis/1000.0f);

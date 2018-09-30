@@ -24,7 +24,7 @@ static void initbuffer(vr::vrbuffer &buf)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screenw, screenh, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, vrc->vrw, vrc->vrh, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
     glFramebufferTexture2D_(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, buf.resolvetex, 0);
 
@@ -47,15 +47,13 @@ static void initscreen()
     vrc->normalw = screenw;
     vrc->normalh = screenh;
 
-    uint neww, newh;
-    vrc->interface->getresolution(neww, newh);
-
-    screenres(neww, newh);
+    vrc->interface->getresolution(vrc->vrw, vrc->vrh);
+    conoutf("VR: resolution for each view: %dx%d", vrc->vrw, vrc->vrh);
+    screenres(vrc->vrw * vr::VR_NUM_VIEWS, vrc->vrh);
 }
 
 void vr::init()
 {
-    return;
     if(!vrc) vrc = new vrcontext;
 
 #ifdef VR_OPENVR
@@ -88,11 +86,6 @@ void vr::cleanup()
 
     delete vrc;
     vrc = NULL;
-}
-
-void vr::setview(int view)
-{
-    if(isenabled()) vrc->curview = view;
 }
 
 static void updatecamangles()
@@ -131,38 +124,35 @@ static void updatemovement()
 void vr::update()
 {
     if(!isenabled()) return;
-    
+
     vrc->interface->update(vrc->devices);
     updatecamangles();
     updatemovement();
-}
-
-void vr::finishrender()
-{
-    if(!isenabled()) return;
-
-    glFlush();
-    glFinish();
-
-    glBindFramebuffer_(GL_FRAMEBUFFER, 0);
-
-    glBindFramebuffer_(GL_READ_FRAMEBUFFER, 0);
-    glBindFramebuffer_(GL_DRAW_FRAMEBUFFER, vrc->buffers[vrc->curview].resolvefb);
-
-    glBlitFramebuffer_(0, 0, screenw, screenh, 0, 0, screenw, screenh, GL_COLOR_BUFFER_BIT, GL_LINEAR);
-
-    glBindFramebuffer_(GL_READ_FRAMEBUFFER, 0);
-    glBindFramebuffer_(GL_DRAW_FRAMEBUFFER, 0);
-
-    // TODO: Handle multisampling
-    //glDisable(GL_MULTISAMPLE);
 }
 
 void vr::submitrender()
 {
     if(!isenabled()) return;
 
-    loopi(VR_NUM_VIEWS) vrc->interface->submitrender(vrc->buffers[i], i);
+    loopi(VR_NUM_VIEWS)
+    {
+        glBindFramebuffer_(GL_FRAMEBUFFER, 0);
+        glBindFramebuffer_(GL_READ_FRAMEBUFFER, 0);
+
+        uint x1 = vrc->vrw * i;
+        uint x2 = x1 + vrc->vrw;
+
+        glBindFramebuffer_(GL_DRAW_FRAMEBUFFER, vrc->buffers[i].resolvefb);
+        glBlitFramebuffer_(x1, 0, x2, vrc->vrh, 0, 0, vrc->vrw, vrc->vrh, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+
+        glBindFramebuffer_(GL_READ_FRAMEBUFFER, 0);
+        glBindFramebuffer_(GL_DRAW_FRAMEBUFFER, 0);
+
+        // TODO: Handle multisampling
+        //glDisable(GL_MULTISAMPLE);
+
+        vrc->interface->submitrender(vrc->buffers[i], i);
+    }
 }
 
 bool vr::isenabled()
@@ -170,11 +160,11 @@ bool vr::isenabled()
     return vrc && vrc->active;
 }
 
-matrix4 vr::getviewtransform()
+matrix4 vr::getviewtransform(int view)
 {
     if(!isenabled()) return matrix4(vec(1, 0, 0), vec(0, 1, 0), vec(0, 0, 1));
 
-    matrix4 eye = vrc->interface->getviewtransform(vrc->curview),
+    matrix4 eye = vrc->interface->getviewtransform(view),
             hmd = gethmd()->pose;
 
     hmd.settranslation(0, 0, 0); // Strip the pose of its translation
@@ -189,11 +179,11 @@ matrix4 vr::getviewtransform()
     return m;
 }
 
-matrix4 vr::getviewprojection()
+matrix4 vr::getviewprojection(int view)
 {
     if(!isenabled()) return matrix4(vec(1, 0, 0), vec(0, 1, 0), vec(0, 0, 1));
 
-    return vrc->interface->getviewprojection(vrc->curview);
+    return vrc->interface->getviewprojection(view);
 }
 
 int vr::getnumdevices(int type)

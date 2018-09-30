@@ -310,7 +310,7 @@ void renderao()
     {
         if(msaasamples) glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, msnormaltex);
         else glBindTexture(GL_TEXTURE_RECTANGLE, gnormaltex);
-        LOCALPARAM(normalmatrix, matrix3(cammatrix));
+        LOCALPARAM(normalmatrix, matrix3(cammatrix[0])); // It's fine to use either of the camera matrices, both will have the same orientation
     }
     glActiveTexture_(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, aonoisetex);
@@ -4612,14 +4612,14 @@ void rendertransparent()
 
     if(ghasstencil) glEnable(GL_STENCIL_TEST);
 
-    float rayw = 0.5f / renderinstances;
+    float rayw = 1.0f / renderinstances;
     matrix4 raymatrix[RENDER_MAX_INSTANCES];
     loopi(RENDER_MAX_INSTANCES)
     {
         raymatrix[i] = matrix4(vec(-0.5f*vieww*projmatrix[i].a.x, 0, rayw*vieww - rayw*vieww*projmatrix[i].c.x),
                                vec(0, -0.5f*viewh*projmatrix[i].b.y, 0.5f*viewh - 0.5f*viewh*projmatrix[i].c.y));
 
-        raymatrix[i].muld(cammatrix);
+        raymatrix[i].muld(cammatrix[i]);
     }
 
     GLOBALPARAMV(raymatrix, raymatrix, RENDER_MAX_INSTANCES);
@@ -4808,10 +4808,10 @@ void preparegbuffer(bool depthclear)
     {
         linearworldmatrix[0].muld(invcamprojmatrix[0], invscreenmatrix);
         if(!gdepthformat) loopi(RENDER_MAX_INSTANCES) worldmatrix[i] = linearworldmatrix[i];
-        linearworldmatrix[0].a.z = invcammatrix.a.z;
-        linearworldmatrix[0].b.z = invcammatrix.b.z;
-        linearworldmatrix[0].c.z = invcammatrix.c.z;
-        linearworldmatrix[0].d.z = invcammatrix.d.z;
+        linearworldmatrix[0].a.z = invcammatrix[0].a.z;
+        linearworldmatrix[0].b.z = invcammatrix[0].b.z;
+        linearworldmatrix[0].c.z = invcammatrix[0].c.z;
+        linearworldmatrix[0].d.z = invcammatrix[0].d.z;
         if(gdepthformat) loopi(RENDER_MAX_INSTANCES) worldmatrix[i] = linearworldmatrix[i];
 
         GLOBALPARAMF(radialfogscale, 0, 0, 0, 0);
@@ -4824,12 +4824,12 @@ void preparegbuffer(bool depthclear)
         loopi(RENDER_MAX_INSTANCES)
         {
             matrix4 invproj;
-            invproj.invert(getviewproj(i));
+            invproj.invert(projmatrix[i]);
             eyeprojshift[i].muld(invproj, invscreenmatrix);
 
             float xscale = eyeprojshift[i].a.x, yscale = eyeprojshift[i].b.y, xoffset = eyeprojshift[i].d.x, yoffset = eyeprojshift[i].d.y, zscale = eyeprojshift[i].d.z;
             depthmatrix[i] = matrix4(vec(xscale/zscale, 0, xoffset/zscale), vec(0, yscale/zscale, yoffset/zscale));
-            linearworldmatrix[i].muld(invcammatrix, depthmatrix[i]);
+            linearworldmatrix[i].muld(invcammatrix[i], depthmatrix[i]);
 
             radialfogscale[i] = vec4(xscale/zscale, yscale/zscale, xoffset/zscale, yoffset/zscale);
         }

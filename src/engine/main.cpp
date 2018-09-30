@@ -1226,6 +1226,7 @@ int main(int argc, char **argv)
         gl_setupframe(!mainmenu);
 
         inbetweenframes = false;
+
         gl_drawframe();
         swapbuffers();
         renderedframe = inbetweenframes = true;

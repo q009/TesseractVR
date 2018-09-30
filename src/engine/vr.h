@@ -59,26 +59,25 @@ namespace vr
     struct vrcontext
     {
         uint normalw, normalh;
+        uint vrw, vrh;
         bool active;
-        int curview;
         vrinterface *interface;
         vrdevices devices;
         vrbuffer buffers[VR_NUM_VIEWS];
 
         bool moving;
 
-        vrcontext() : active(false), curview(VR_VIEW_LEFT), moving(false) {}
+        vrcontext() : active(false), moving(false) {}
     };
 
     void init();
     void cleanup();
     void update();
-    void setview(int view);
     void finishrender();
     void submitrender();
     bool isenabled();
-    matrix4 getviewtransform();
-    matrix4 getviewprojection();
+    matrix4 getviewtransform(int view);
+    matrix4 getviewprojection(int view);
     int getnumdevices(int type);
     vrdev *getdevice(int type, int index = 0);
     vrdev *gethmd();

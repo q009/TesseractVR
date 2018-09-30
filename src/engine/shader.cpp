@@ -904,10 +904,12 @@ static void genfogshader(vector<char> &vsbuf, vector<char> &psbuf, const char *v
         if(!strstr(vs, "lineardepth"))
         {
             vsbuf.put(vs, vsmain - vs);
-            const char *fogparams = "\nuniform vec2 lineardepthscale;\nvarying float lineardepth;\n";
+            const char *fogparams = "\nuniform vec2 lineardepthscale;\nvarying float lineardepth;\nflat varying int instanceID;\n";
             vsbuf.put(fogparams, strlen(fogparams));
             vsbuf.put(vsmain, vsend - vsmain);
-            const char *vsfog = "\nlineardepth = dot(lineardepthscale, gl_Position.zw);\n";
+            const char *vsfog =
+                "\nlineardepth = dot(lineardepthscale, gl_Position.zw);\n"
+                "instanceID = gl_InstanceID;\n";
             vsbuf.put(vsfog, strlen(vsfog));
             vsbuf.put(vsend, strlen(vsend)+1);
         }
@@ -924,8 +926,9 @@ static void genfogshader(vector<char> &vsbuf, vector<char> &psbuf, const char *v
         const char *fogparams =
             "\nuniform vec3 fogcolor;\n"
             "uniform vec2 fogdensity;\n"
-            "uniform vec4 radialfogscale;\n"
-            "#define fogcoord lineardepth*length(vec3(gl_FragCoord.xy*radialfogscale.xy + radialfogscale.zw, 1.0))\n";
+            "uniform vec4 radialfogscale[RENDER_MAX_INSTANCES];\n"
+            "flat varying int instanceID;\n"
+            "#define fogcoord lineardepth*length(vec3(gl_FragCoord.xy*radialfogscale[instanceID].xy + radialfogscale[instanceID].zw, 1.0))\n";
         psbuf.put(fogparams, strlen(fogparams));
         psbuf.put(psmain, psend - psmain);
         const char *psdef = "\n#define FOG_COLOR ";

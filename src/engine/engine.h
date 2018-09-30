@@ -137,7 +137,7 @@ extern bool hdrfloat;
 extern float ldrscale, ldrscaleb;
 extern int drawtex;
 extern const matrix4 viewmatrix, invviewmatrix;
-extern matrix4 cammatrix, projmatrix[RENDER_MAX_INSTANCES], camprojmatrix[RENDER_MAX_INSTANCES], invcammatrix, invcamprojmatrix[RENDER_MAX_INSTANCES], invprojmatrix[RENDER_MAX_INSTANCES];
+extern matrix4 cammatrix[RENDER_MAX_INSTANCES], projmatrix[RENDER_MAX_INSTANCES], camprojmatrix[RENDER_MAX_INSTANCES], invcammatrix[RENDER_MAX_INSTANCES], invcamprojmatrix[RENDER_MAX_INSTANCES], invprojmatrix[RENDER_MAX_INSTANCES];
 extern int fog;
 extern bvec fogcolour;
 extern vec curfogcolor;
@@ -180,7 +180,6 @@ extern float calcfogdensity(float dist);
 extern float calcfogcull();
 extern void writecrosshairs(stream *f);
 extern void renderavatar();
-extern matrix4 getviewproj(int instance);
 
 namespace modelpreview
 {

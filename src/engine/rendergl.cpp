@@ -1252,35 +1252,28 @@ vec worldpos, camdir, camright, camup;
 void setcammatrix()
 {
     // move from RH to Z-up LH quake style worldspace
-    cammatrix = viewmatrix;
-    if(vr::isenabled()) cammatrix.muld(vr::getviewtransform());
-    else
+    loopi(renderinstances)
     {
-        cammatrix.rotate_around_y(camera1->roll*RAD);
-        cammatrix.rotate_around_x(camera1->pitch*-RAD);
-        cammatrix.rotate_around_z(camera1->yaw*-RAD);
-    }
-    cammatrix.translate(vec(camera1->o).neg());
+        cammatrix[i] = viewmatrix;
+        if(vr::isenabled()) cammatrix[i].muld(vr::getviewtransform(i));
+        else
+        {
+            cammatrix[i].rotate_around_y(camera1->roll*RAD);
+            cammatrix[i].rotate_around_x(camera1->pitch*-RAD);
+            cammatrix[i].rotate_around_z(camera1->yaw*-RAD);
+        }
+        cammatrix[i].translate(vec(camera1->o).neg());
 
-    cammatrix.transposedtransformnormal(vec(viewmatrix.b), camdir);
-    cammatrix.transposedtransformnormal(vec(viewmatrix.a).neg(), camright);
-    cammatrix.transposedtransformnormal(vec(viewmatrix.c), camup);
+        cammatrix[i].transposedtransformnormal(vec(viewmatrix.b), camdir);
+        cammatrix[i].transposedtransformnormal(vec(viewmatrix.a).neg(), camright);
+        cammatrix[i].transposedtransformnormal(vec(viewmatrix.c), camup);
+    }
 
     if(!drawtex)
     {
         if(raycubepos(camera1->o, camdir, worldpos, 0, RAY_CLIPMAT|RAY_SKIPFIRST) == -1)
             worldpos = vec(camdir).mul(2*worldsize).add(camera1->o); // if nothing is hit, just far away in the view direction
     }
-}
-
-matrix4 getviewproj(int instance)
-{
-    if(!instancedstereo) return projmatrix[0];
-
-    matrix4 proj = projmatrix[instance];
-    proj.jitter(instance ? 0.5f : -0.5f, 0);
-
-    return proj;
 }
 
 void setcamprojmatrix(bool init = true, bool flush = false)
@@ -1295,15 +1288,15 @@ void setcamprojmatrix(bool init = true, bool flush = false)
     loopi(renderinstances)
     {
         camprojmatrix[i].identity();
-        camprojmatrix[i].muld(getviewproj(i));
-        camprojmatrix[i].muld(cammatrix);
+        camprojmatrix[i].muld(projmatrix[i]);
+        camprojmatrix[i].muld(cammatrix[i]);
     }
 
     if(init)
     {
-        invcammatrix.invert(cammatrix);
         loopi(renderinstances)
         {
+            invcammatrix[i].invert(cammatrix[i]);
             invprojmatrix[i].invert(projmatrix[i]);
             invcamprojmatrix[i].invert(camprojmatrix[i]);
         }
@@ -1548,14 +1541,14 @@ float calcfrustumboundsphere(float nearplane, float farplane,  const vec &pos, c
 
 extern const matrix4 viewmatrix(vec(-1, 0, 0), vec(0, 0, 1), vec(0, -1, 0));
 extern const matrix4 invviewmatrix(vec(-1, 0, 0), vec(0, 0, -1), vec(0, 1, 0));
-matrix4 cammatrix, projmatrix[RENDER_MAX_INSTANCES], camprojmatrix[RENDER_MAX_INSTANCES], invcammatrix, invcamprojmatrix[RENDER_MAX_INSTANCES], invprojmatrix[RENDER_MAX_INSTANCES];
+matrix4 cammatrix[RENDER_MAX_INSTANCES], projmatrix[RENDER_MAX_INSTANCES], camprojmatrix[RENDER_MAX_INSTANCES], invcammatrix[RENDER_MAX_INSTANCES], invcamprojmatrix[RENDER_MAX_INSTANCES], invprojmatrix[RENDER_MAX_INSTANCES];
 
 FVAR(nearplane, 0.01f, 0.54f, 2.0f);
 
 vec calcavatarpos(const vec &pos, float dist)
 {
     vec eyepos;
-    cammatrix.transform(pos, eyepos);
+    cammatrix[0].transform(pos, eyepos);
     GLdouble ydist = nearplane * tan(curavatarfov/2*RAD), xdist = ydist * aspect;
     vec4 scrpos;
     scrpos.x = eyepos.x*nearplane/xdist;
@@ -1633,7 +1626,7 @@ bool calcspherescissor(const vec &center, float size, float &sx1, float &sy1, fl
     
     if(drawtex == DRAWTEX_MINIMAP)
     {
-        cammatrix.transform(center, e);
+        cammatrix[0].transform(center, e);
         if(e.z > 2*size) { sx1 = sy1 = sz1 = 1; sx2 = sy2 = sz2 = -1; return false; }
 
         vec dir(size, size, size);
@@ -2469,8 +2462,14 @@ void gl_drawview()
 
     loopi(renderinstances)
     {
-        if(vr::isenabled()) projmatrix[i] = vr::getviewprojection(/* TODO: viewindex here */);
+        if(vr::isenabled()) projmatrix[i] = vr::getviewprojection(i);
         else projmatrix[i].perspective(fovy, aspect, nearplane, farplane);
+
+        if(instancedstereo)
+        {
+            projmatrix[i].scalexy(0.5f, 1);
+            projmatrix[i].jitter(i ? 0.5f : -0.5f, 0);
+        }
     }
     setcamprojmatrix();
 
@@ -2902,19 +2901,7 @@ void gl_drawframe()
     vieww = hudw;
     viewh = hudh;
     if(mainmenu) gl_drawmainmenu();
-    else
-    {
-        if(vr::isenabled())
-        {
-            loopi(vr::VR_NUM_VIEWS)
-            {
-                vr::setview(i);
-                gl_drawview();
-                vr::finishrender();
-            }
-        }
-        else gl_drawview();
-    }
+    else gl_drawview();
     UI::render();
     gl_drawhud();
 }
