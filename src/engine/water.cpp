@@ -47,7 +47,7 @@ void setupcaustics(int tmu, float surface = -1e16f)
     {
         float bz = surface + camera1->o.z + (vertwater ? WATER_AMPLITUDE : 0);
         matrix4 m[RENDER_MAX_VIEWS];
-        loopi(RENDER_MAX_VIEWS)
+        loopi(viewinstances)
         {
             m[i] = matrix4(vec4(s.x, t.x,  0, 0),
                            vec4(s.y, t.y,  0, 0),

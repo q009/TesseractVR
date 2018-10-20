@@ -1252,7 +1252,7 @@ vec worldpos, camdir, camright, camup;
 void setcammatrix()
 {
     // move from RH to Z-up LH quake style worldspace
-    loopi(RENDER_MAX_VIEWS)
+    loopi(viewinstances)
     {
         cammatrix[i] = viewmatrix;
         if(vr::isenabled()) cammatrix[i].muld(vr::getviewtransform(i));
@@ -1285,7 +1285,7 @@ void setcamprojmatrix(bool init = true, bool flush = false)
 
     jitteraa();
 
-    loopi(RENDER_MAX_VIEWS)
+    loopi(viewinstances)
     {
         camprojmatrix[i].identity();
         camprojmatrix[i].muld(projmatrix[i]);
@@ -1294,7 +1294,7 @@ void setcamprojmatrix(bool init = true, bool flush = false)
 
     if(init)
     {
-        loopi(RENDER_MAX_VIEWS)
+        loopi(viewinstances)
         {
             invcammatrix[i].invert(cammatrix[i]);
             invprojmatrix[i].invert(projmatrix[i]);
@@ -1303,7 +1303,7 @@ void setcamprojmatrix(bool init = true, bool flush = false)
     }
 
     vec2 lineardepthscale[RENDER_MAX_VIEWS];
-    loopi(RENDER_MAX_VIEWS) lineardepthscale[i] = projmatrix[i].lineardepthscale();
+    loopi(viewinstances) lineardepthscale[i] = projmatrix[i].lineardepthscale();
 
     GLOBALPARAMV(camprojmatrix, camprojmatrix, RENDER_MAX_VIEWS);
     GLOBALPARAMV(lineardepthscale, lineardepthscale, RENDER_MAX_VIEWS); //(invprojmatrix.c.z, invprojmatrix.d.z));
@@ -1566,7 +1566,7 @@ void renderavatar()
     if(isthirdperson() || vr::isenabled()) return;
 
     matrix4 oldprojmatrix[RENDER_MAX_VIEWS];
-    loopi(RENDER_MAX_VIEWS)
+    loopi(viewinstances)
     {
         oldprojmatrix[i] = nojittermatrix[i];
         projmatrix[i].perspective(curavatarfov, aspect, nearplane, farplane);
@@ -1578,7 +1578,7 @@ void renderavatar()
     game::renderavatar();
     disableavatarmask();
 
-    loopi(RENDER_MAX_VIEWS) projmatrix[i] = oldprojmatrix[i];
+    loopi(viewinstances) projmatrix[i] = oldprojmatrix[i];
 
     setcamprojmatrix(false);
 }
@@ -1598,7 +1598,7 @@ void enablepolygonoffset(GLenum type)
         return;
     }
 
-    loopi(RENDER_MAX_VIEWS)
+    loopi(viewinstances)
     {
         projmatrix[i] = nojittermatrix[i];
         nooffsetmatrix[i] = projmatrix[i];
@@ -1616,7 +1616,7 @@ void disablepolygonoffset(GLenum type)
         return;
     }
 
-    loopi(RENDER_MAX_VIEWS) projmatrix[i] = nooffsetmatrix[i];
+    loopi(viewinstances) projmatrix[i] = nooffsetmatrix[i];
     setcamprojmatrix(false, true);
 }
 
@@ -1653,7 +1653,7 @@ bool calcspherescissor(const vec &center, float size, float &sx1, float &sy1, fl
 
         //float focaldist = 1.0f/tan(fovy*0.5f*RAD);
 
-        //loopi(RENDER_MAX_VIEWS)
+        //loopi(viewinstances)
         //{
         //    camprojmatrix[i].transform(center, e);
         //    e.z = -e.z;
@@ -2460,7 +2460,7 @@ void gl_drawview()
 
     farplane = worldsize*2;
 
-    loopi(RENDER_MAX_VIEWS)
+    loopi(viewinstances)
     {
         if(vr::isenabled()) projmatrix[i] = vr::getviewprojection(i);
         else projmatrix[i].perspective(fovy, aspect, nearplane, farplane);

@@ -2873,7 +2873,7 @@ static inline void setlightglobals(bool transparent = false)
     }
 
     matrix4 lightmatrix[RENDER_MAX_VIEWS];
-    loopi(RENDER_MAX_VIEWS) lightmatrix[i].identity();
+    loopi(viewinstances) lightmatrix[i].identity();
     GLOBALPARAMV(lightmatrix, lightmatrix, RENDER_MAX_VIEWS);
 }
 
@@ -2971,7 +2971,7 @@ static void renderlightsnobatch(Shader *s, int stencilref, bool transparent, flo
             if(sx1 >= sx2 || sy1 >= sy2 || l.sz1 >= l.sz2 || (avatarpass && l.dist - l.radius > avatarshadowdist)) continue;
 
             matrix4 lightmatrix[RENDER_MAX_VIEWS];
-            loopi(RENDER_MAX_VIEWS)
+            loopi(viewinstances)
             {
                 lightmatrix[i] = camprojmatrix[i];
                 lightmatrix[i].translate(l.o);
@@ -3266,7 +3266,7 @@ void rendervolumetric()
         if(!l.volumetric() || l.checkquery()) continue;
 
         matrix4 lightmatrix[RENDER_MAX_VIEWS];
-        loopi(RENDER_MAX_VIEWS)
+        loopi(viewinstances)
         {
             lightmatrix[i] = camprojmatrix[i];
             lightmatrix[i].translate(l.o);
@@ -4614,7 +4614,7 @@ void rendertransparent()
 
     float rayw = 1.0f / viewinstances;
     matrix4 raymatrix[RENDER_MAX_VIEWS];
-    loopi(RENDER_MAX_VIEWS)
+    loopi(viewinstances)
     {
         raymatrix[i] = matrix4(vec(-0.5f*vieww*projmatrix[i].a.x, 0, rayw*vieww - rayw*vieww*projmatrix[i].c.x),
                                vec(0, -0.5f*viewh*projmatrix[i].b.y, 0.5f*viewh - 0.5f*viewh*projmatrix[i].c.y));
@@ -4807,12 +4807,12 @@ void preparegbuffer(bool depthclear)
     if(drawtex == DRAWTEX_MINIMAP)
     {
         linearworldmatrix[0].muld(invcamprojmatrix[0], invscreenmatrix);
-        if(!gdepthformat) loopi(RENDER_MAX_VIEWS) worldmatrix[i] = linearworldmatrix[i];
+        if(!gdepthformat) loopi(viewinstances) worldmatrix[i] = linearworldmatrix[i];
         linearworldmatrix[0].a.z = invcammatrix[0].a.z;
         linearworldmatrix[0].b.z = invcammatrix[0].b.z;
         linearworldmatrix[0].c.z = invcammatrix[0].c.z;
         linearworldmatrix[0].d.z = invcammatrix[0].d.z;
-        if(gdepthformat) loopi(RENDER_MAX_VIEWS) worldmatrix[i] = linearworldmatrix[i];
+        if(gdepthformat) loopi(viewinstances) worldmatrix[i] = linearworldmatrix[i];
 
         GLOBALPARAMF(radialfogscale, 0, 0, 0, 0);
     }
@@ -4821,7 +4821,7 @@ void preparegbuffer(bool depthclear)
         matrix4 eyeprojshift[RENDER_MAX_VIEWS];
         matrix4 depthmatrix[RENDER_MAX_VIEWS];
         vec4 radialfogscale[RENDER_MAX_VIEWS];
-        loopi(RENDER_MAX_VIEWS)
+        loopi(viewinstances)
         {
             matrix4 invproj;
             invproj.invert(projmatrix[i]);
@@ -4834,13 +4834,13 @@ void preparegbuffer(bool depthclear)
             radialfogscale[i] = vec4(xscale/zscale, yscale/zscale, xoffset/zscale, yoffset/zscale);
         }
 
-        if(gdepthformat) loopi(RENDER_MAX_VIEWS) worldmatrix[i] = linearworldmatrix[i];
-        else loopi(RENDER_MAX_VIEWS) worldmatrix[i].muld(invcamprojmatrix[i], invscreenmatrix);
+        if(gdepthformat) loopi(viewinstances) worldmatrix[i] = linearworldmatrix[i];
+        else loopi(viewinstances) worldmatrix[i].muld(invcamprojmatrix[i], invscreenmatrix);
 
         GLOBALPARAMV(radialfogscale, radialfogscale, RENDER_MAX_VIEWS);
     }
 
-    loopi(RENDER_MAX_VIEWS)
+    loopi(viewinstances)
     {
         screenmatrix[i].identity();
         screenmatrix[i].settranslation(0.5f*vieww, 0.5f*viewh, 0.5f);

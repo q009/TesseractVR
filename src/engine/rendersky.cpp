@@ -355,7 +355,7 @@ static void drawfogdome()
     matrix4 skymatrix = cammatrix[0], skyprojmatrix[RENDER_MAX_VIEWS];
     skymatrix.settranslation(vec(cammatrix[0].c).mul(farplane*fogdomeheight*0.5f));
     skymatrix.scale(farplane/2, farplane/2, farplane*(0.5f - fogdomeheight*0.5f));
-    loopi(RENDER_MAX_VIEWS) skyprojmatrix[i].mul(projmatrix[i], skymatrix);
+    loopi(viewinstances) skyprojmatrix[i].mul(projmatrix[i], skymatrix);
     LOCALPARAMV(skymatrix, skyprojmatrix, RENDER_MAX_VIEWS);
 
     fogdome::draw();
@@ -388,7 +388,7 @@ static void drawatmosphere()
     SETSHADER(atmosphere);
 
     matrix4 sunmatrix[RENDER_MAX_VIEWS];
-    loopi(RENDER_MAX_VIEWS)
+    loopi(viewinstances)
     {
         matrix4 invproj;
         invproj.invert(projmatrix[i]);
@@ -495,7 +495,7 @@ void drawskybox(bool clear)
         matrix4 skymatrix = cammatrix[0], skyprojmatrix[RENDER_MAX_VIEWS];
         skymatrix.settranslation(0, 0, 0);
         skymatrix.rotate_around_z((spinsky*lastmillis/1000.0f+yawsky)*-RAD);
-        loopi(RENDER_MAX_VIEWS) skyprojmatrix[i].mul(projmatrix[i], skymatrix);
+        loopi(viewinstances) skyprojmatrix[i].mul(projmatrix[i], skymatrix);
         
         LOCALPARAMV(skymatrix, skyprojmatrix, RENDER_MAX_VIEWS);
 
@@ -532,7 +532,7 @@ void drawskybox(bool clear)
         matrix4 skymatrix = cammatrix[0], skyprojmatrix[RENDER_MAX_VIEWS];
         skymatrix.settranslation(0, 0, 0);
         skymatrix.rotate_around_z((spinclouds*lastmillis/1000.0f+yawclouds)*-RAD);
-        loopi(RENDER_MAX_VIEWS) skyprojmatrix[i].mul(projmatrix[i], skymatrix);
+        loopi(viewinstances) skyprojmatrix[i].mul(projmatrix[i], skymatrix);
         LOCALPARAMV(skymatrix, skyprojmatrix, RENDER_MAX_VIEWS);
 
         drawenvbox(clouds, cloudclip);
@@ -552,7 +552,7 @@ void drawskybox(bool clear)
         matrix4 skymatrix = cammatrix[0], skyprojmatrix[RENDER_MAX_VIEWS];
         skymatrix.settranslation(0, 0, 0);
         skymatrix.rotate_around_z((spincloudlayer*lastmillis/1000.0f+yawcloudlayer)*-RAD);
-        loopi(RENDER_MAX_VIEWS) skyprojmatrix[i].mul(projmatrix[i], skymatrix);
+        loopi(viewinstances) skyprojmatrix[i].mul(projmatrix[i], skymatrix);
         LOCALPARAMV(skymatrix, skyprojmatrix, RENDER_MAX_VIEWS);
 
         drawenvoverlay(cloudoverlay, cloudoffsetx + cloudscrollx * lastmillis/1000.0f, cloudoffsety + cloudscrolly * lastmillis/1000.0f);

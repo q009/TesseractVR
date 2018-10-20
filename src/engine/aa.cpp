@@ -39,7 +39,7 @@ void setuptqaa(int w, int h)
     }
     glBindFramebuffer_(GL_FRAMEBUFFER, 0);
 
-    loopi(RENDER_MAX_VIEWS) tqaaprevscreenmatrix[i].identity();
+    loopi(viewinstances) tqaaprevscreenmatrix[i].identity();
 
     loadtqaashaders();
 }
@@ -65,7 +65,7 @@ void setaavelocityparams(GLenum tmu)
     matrix4 reproject[RENDER_MAX_VIEWS];
     vec2 jitter = tqaaframe&1 ? vec2(0.5f, 0.5f) : vec2(-0.5f, -0.5f);
     if(multisampledaa()) { jitter.x *= 0.5f; jitter.y *= -0.5f; }
-    loopi(RENDER_MAX_VIEWS)
+    loopi(viewinstances)
     {
         reproject[i].muld(tqaaframe ? tqaaprevscreenmatrix[i] : screenmatrix[i], worldmatrix[i]);
         if(tqaaframe) reproject[i].jitter(jitter.x, jitter.y);
@@ -108,7 +108,7 @@ void resolvetqaa(GLuint outfbo)
 
     swap(tqaafbo[0], tqaafbo[1]);
     swap(tqaatex[0], tqaatex[1]);
-    loopi(RENDER_MAX_VIEWS) tqaaprevscreenmatrix[i] = screenmatrix[i];
+    loopi(viewinstances) tqaaprevscreenmatrix[i] = screenmatrix[i];
     tqaaframe++;
 }
 
@@ -683,13 +683,13 @@ matrix4 nojittermatrix[RENDER_MAX_VIEWS];
 
 void jitteraa()
 {
-    loopi(RENDER_MAX_VIEWS) nojittermatrix[i] = projmatrix[i];
+    loopi(viewinstances) nojittermatrix[i] = projmatrix[i];
 
     if(!drawtex && tqaa)
     {
         vec2 jitter = tqaaframe&1 ? vec2(0.25f, 0.25f) : vec2(-0.25f, -0.25f);
         if(multisampledaa()) { jitter.x *= 0.5f; jitter.y *= -0.5f; }
-        loopi(RENDER_MAX_VIEWS) projmatrix[i].jitter(jitter.x*2.0f/vieww, jitter.y*2.0f/viewh);
+        loopi(viewinstances) projmatrix[i].jitter(jitter.x*2.0f/vieww, jitter.y*2.0f/viewh);
     }
 }
 

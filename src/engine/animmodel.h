@@ -1003,7 +1003,7 @@ struct animmodel : model
             if(!(anim&ANIM_NORENDER))
             {
                 matrix4 modelmatrix[RENDER_MAX_VIEWS];
-                loopi(RENDER_MAX_VIEWS)
+                loopi(viewinstances)
                 {
                     modelmatrix[i].mul(shadowmapping ? shadowmatrix : camprojmatrix[i], matrixstack[matrixpos]);
                     if(resize!=1) modelmatrix[i].scale(resize);

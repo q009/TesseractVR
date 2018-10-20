@@ -165,7 +165,7 @@ struct fireballrenderer : listrenderer
         LOCALPARAM(texgenT, rot.transposedtransform(t));
 
         matrix4 m[RENDER_MAX_VIEWS];
-        loopi(RENDER_MAX_VIEWS)
+        loopi(viewinstances)
         {
             m[i] = matrix4(rot, o);
             m[i].scale(psize, psize, inside ? -psize : psize);
