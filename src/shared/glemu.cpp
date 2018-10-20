@@ -87,7 +87,7 @@ namespace gle
         if(count <= 0) return;
         if(glversion < 300)
         {
-            glDrawArraysInstanced_(GL_QUADS, offset*4, count*4, renderinstances);
+            glDrawArraysInstanced_(GL_QUADS, offset*4, count*4, viewinstances);
             return;
         }
         if(offset + count > MAXQUADS)
@@ -95,7 +95,7 @@ namespace gle
             if(offset >= MAXQUADS) return;
             count = MAXQUADS - offset;
         }
-        glDrawElementsInstanced_(GL_TRIANGLES, count*6, GL_UNSIGNED_SHORT, (ushort *)0 + offset*6, renderinstances);
+        glDrawElementsInstanced_(GL_TRIANGLES, count*6, GL_UNSIGNED_SHORT, (ushort *)0 + offset*6, viewinstances);
     }
 
     void defattrib(int type, int size, int format)
@@ -302,13 +302,13 @@ namespace gle
             if(multidrawstart.length())
             {
                 multidraw();
-                if(renderinstances > 1)
+                if(viewinstances > 1)
                 {
                     loopv(multidrawstart)
                     {
                         if(start) multidrawstart[i] += start;
                         // TODO: Reduce the amount of drawcalls
-                        glDrawArraysInstanced_(primtype, multidrawstart[i], multidrawcount[i], renderinstances);
+                        glDrawArraysInstanced_(primtype, multidrawstart[i], multidrawcount[i], viewinstances);
                     }
                 }
                 else
@@ -319,7 +319,7 @@ namespace gle
                 multidrawstart.setsize(0);
                 multidrawcount.setsize(0);
             }
-            else glDrawArraysInstanced_(primtype, start, numvertexes, renderinstances);
+            else glDrawArraysInstanced_(primtype, start, numvertexes, viewinstances);
         }
         attribbuf.reset(attribdata, MAXVBOSIZE);
         return numvertexes;

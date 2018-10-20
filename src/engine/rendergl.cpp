@@ -5,7 +5,7 @@
 bool hasVAO = false, hasTR = false, hasTSW = false, hasPBO = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasUBO = false, hasMBR = false, hasDB2 = false, hasDBB = false, hasTG = false, hasTQ = false, hasPF = false, hasTRG = false, hasTI = false, hasHFV = false, hasHFP = false, hasDBT = false, hasDC = false, hasDBGO = false, hasEGPU4 = false, hasGPU4 = false, hasGPU5 = false, hasBFE = false, hasEAL = false, hasCR = false, hasOQ2 = false, hasES3 = false, hasCB = false, hasCI = false;
 bool mesa = false, intel = false, amd = false, nvidia = false;
 
-int renderinstances = 1;
+int viewinstances = 1;
 bool renderinstancesrdy = false;
 
 int hasstencil = 0;
@@ -15,10 +15,10 @@ VAR(glslversion, 1, 0, 0);
 VAR(glcompat, 1, 0, 0);
 
 VARFP(instancedstereo, 0, 0, 1, {
-    renderinstances = instancedstereo ? 2 : 1;
+    viewinstances = instancedstereo ? 2 : 1;
     initwarning("Instanced stereo rendering", INIT_LOAD, CHANGE_SHADERS);
 });
-ICOMMAND(renderstereo, "", (), intret(renderinstances == 2 ? 2 : 1));
+ICOMMAND(renderstereo, "", (), intret(viewinstances == 2 ? 2 : 1));
 
 // GL_EXT_timer_query
 PFNGLGETQUERYOBJECTI64VEXTPROC glGetQueryObjecti64v_  = NULL;
@@ -1252,7 +1252,7 @@ vec worldpos, camdir, camright, camup;
 void setcammatrix()
 {
     // move from RH to Z-up LH quake style worldspace
-    loopi(renderinstances)
+    loopi(RENDER_MAX_VIEWS)
     {
         cammatrix[i] = viewmatrix;
         if(vr::isenabled()) cammatrix[i].muld(vr::getviewtransform(i));
@@ -1285,7 +1285,7 @@ void setcamprojmatrix(bool init = true, bool flush = false)
 
     jitteraa();
 
-    loopi(renderinstances)
+    loopi(RENDER_MAX_VIEWS)
     {
         camprojmatrix[i].identity();
         camprojmatrix[i].muld(projmatrix[i]);
@@ -1294,7 +1294,7 @@ void setcamprojmatrix(bool init = true, bool flush = false)
 
     if(init)
     {
-        loopi(renderinstances)
+        loopi(RENDER_MAX_VIEWS)
         {
             invcammatrix[i].invert(cammatrix[i]);
             invprojmatrix[i].invert(projmatrix[i]);
@@ -1302,11 +1302,11 @@ void setcamprojmatrix(bool init = true, bool flush = false)
         }
     }
 
-    vec2 lineardepthscale[RENDER_MAX_INSTANCES];
-    loopi(renderinstances) lineardepthscale[i] = projmatrix[i].lineardepthscale();
+    vec2 lineardepthscale[RENDER_MAX_VIEWS];
+    loopi(RENDER_MAX_VIEWS) lineardepthscale[i] = projmatrix[i].lineardepthscale();
 
-    GLOBALPARAMV(camprojmatrix, camprojmatrix, RENDER_MAX_INSTANCES);
-    GLOBALPARAMV(lineardepthscale, lineardepthscale, RENDER_MAX_INSTANCES); //(invprojmatrix.c.z, invprojmatrix.d.z));
+    GLOBALPARAMV(camprojmatrix, camprojmatrix, RENDER_MAX_VIEWS);
+    GLOBALPARAMV(lineardepthscale, lineardepthscale, RENDER_MAX_VIEWS); //(invprojmatrix.c.z, invprojmatrix.d.z));
 
     if(flush && Shader::lastshader) Shader::lastshader->flushparams();
 }
@@ -1541,7 +1541,7 @@ float calcfrustumboundsphere(float nearplane, float farplane,  const vec &pos, c
 
 extern const matrix4 viewmatrix(vec(-1, 0, 0), vec(0, 0, 1), vec(0, -1, 0));
 extern const matrix4 invviewmatrix(vec(-1, 0, 0), vec(0, 0, -1), vec(0, 1, 0));
-matrix4 cammatrix[RENDER_MAX_INSTANCES], projmatrix[RENDER_MAX_INSTANCES], camprojmatrix[RENDER_MAX_INSTANCES], invcammatrix[RENDER_MAX_INSTANCES], invcamprojmatrix[RENDER_MAX_INSTANCES], invprojmatrix[RENDER_MAX_INSTANCES];
+matrix4 cammatrix[RENDER_MAX_VIEWS], projmatrix[RENDER_MAX_VIEWS], camprojmatrix[RENDER_MAX_VIEWS], invcammatrix[RENDER_MAX_VIEWS], invcamprojmatrix[RENDER_MAX_VIEWS], invprojmatrix[RENDER_MAX_VIEWS];
 
 FVAR(nearplane, 0.01f, 0.54f, 2.0f);
 
@@ -1565,8 +1565,8 @@ void renderavatar()
 {
     if(isthirdperson() || vr::isenabled()) return;
 
-    matrix4 oldprojmatrix[RENDER_MAX_INSTANCES];
-    loopi(renderinstances)
+    matrix4 oldprojmatrix[RENDER_MAX_VIEWS];
+    loopi(RENDER_MAX_VIEWS)
     {
         oldprojmatrix[i] = nojittermatrix[i];
         projmatrix[i].perspective(curavatarfov, aspect, nearplane, farplane);
@@ -1578,7 +1578,7 @@ void renderavatar()
     game::renderavatar();
     disableavatarmask();
 
-    loopi(renderinstances) projmatrix[i] = oldprojmatrix[i];
+    loopi(RENDER_MAX_VIEWS) projmatrix[i] = oldprojmatrix[i];
 
     setcamprojmatrix(false);
 }
@@ -1587,7 +1587,7 @@ FVAR(polygonoffsetfactor, -1e4f, -3.0f, 1e4f);
 FVAR(polygonoffsetunits, -1e4f, -3.0f, 1e4f);
 FVAR(depthoffset, -1e4f, 0.01f, 1e4f);
 
-matrix4 nooffsetmatrix[RENDER_MAX_INSTANCES];
+matrix4 nooffsetmatrix[RENDER_MAX_VIEWS];
 
 void enablepolygonoffset(GLenum type)
 {
@@ -1598,7 +1598,7 @@ void enablepolygonoffset(GLenum type)
         return;
     }
 
-    loopi(renderinstances)
+    loopi(RENDER_MAX_VIEWS)
     {
         projmatrix[i] = nojittermatrix[i];
         nooffsetmatrix[i] = projmatrix[i];
@@ -1616,7 +1616,7 @@ void disablepolygonoffset(GLenum type)
         return;
     }
 
-    loopi(renderinstances) projmatrix[i] = nooffsetmatrix[i];
+    loopi(RENDER_MAX_VIEWS) projmatrix[i] = nooffsetmatrix[i];
     setcamprojmatrix(false, true);
 }
 
@@ -1653,7 +1653,7 @@ bool calcspherescissor(const vec &center, float size, float &sx1, float &sy1, fl
 
         //float focaldist = 1.0f/tan(fovy*0.5f*RAD);
 
-        //loopi(renderinstances)
+        //loopi(RENDER_MAX_VIEWS)
         //{
         //    camprojmatrix[i].transform(center, e);
         //    e.z = -e.z;
@@ -1860,7 +1860,7 @@ void screenquad(bool instanced)
     gle::bindvbo(screenquadvbo);
     gle::enablevertex();
     gle::vertexpointer(sizeof(vec2), (const vec2 *)0, GL_FLOAT, 2);
-    glDrawArraysInstanced_(GL_TRIANGLE_STRIP, 0, 4, instanced ? renderinstances : 1);
+    glDrawArraysInstanced_(GL_TRIANGLE_STRIP, 0, 4, instanced ? viewinstances : 1);
     gle::disablevertex();
     gle::clearvbo();
 }
@@ -2460,7 +2460,7 @@ void gl_drawview()
 
     farplane = worldsize*2;
 
-    loopi(renderinstances)
+    loopi(RENDER_MAX_VIEWS)
     {
         if(vr::isenabled()) projmatrix[i] = vr::getviewprojection(i);
         else projmatrix[i].perspective(fovy, aspect, nearplane, farplane);

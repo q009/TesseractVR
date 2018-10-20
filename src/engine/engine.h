@@ -120,8 +120,8 @@ static inline bool pvsoccluded(const ivec &bborigin, int size)
 }
 
 // rendergl
-#define RENDER_MAX_INSTANCES 2
-extern int renderinstances;
+#define RENDER_MAX_VIEWS 2
+extern int viewinstances;
 extern bool hasVAO, hasTR, hasTSW, hasPBO, hasFBO, hasAFBO, hasDS, hasTF, hasCBF, hasS3TC, hasFXT1, hasLATC, hasRGTC, hasAF, hasFBB, hasFBMS, hasTMS, hasMSS, hasFBMSBS, hasUBO, hasMBR, hasDB2, hasDBB, hasTG, hasTQ, hasPF, hasTRG, hasTI, hasHFV, hasHFP, hasDBT, hasDC, hasDBGO, hasEGPU4, hasGPU4, hasGPU5, hasBFE, hasEAL, hasCR, hasOQ2, hasES3, hasCB, hasCI;
 extern int glversion, glslversion, glcompat;
 extern int maxdrawbufs, maxdualdrawbufs;
@@ -137,7 +137,7 @@ extern bool hdrfloat;
 extern float ldrscale, ldrscaleb;
 extern int drawtex;
 extern const matrix4 viewmatrix, invviewmatrix;
-extern matrix4 cammatrix[RENDER_MAX_INSTANCES], projmatrix[RENDER_MAX_INSTANCES], camprojmatrix[RENDER_MAX_INSTANCES], invcammatrix[RENDER_MAX_INSTANCES], invcamprojmatrix[RENDER_MAX_INSTANCES], invprojmatrix[RENDER_MAX_INSTANCES];
+extern matrix4 cammatrix[RENDER_MAX_VIEWS], projmatrix[RENDER_MAX_VIEWS], camprojmatrix[RENDER_MAX_VIEWS], invcammatrix[RENDER_MAX_VIEWS], invcamprojmatrix[RENDER_MAX_VIEWS], invprojmatrix[RENDER_MAX_VIEWS];
 extern int fog;
 extern bvec fogcolour;
 extern vec curfogcolor;
@@ -327,7 +327,7 @@ static inline bool bbinsidespot(const vec &origin, const vec &dir, int spot, con
     return sphereinsidespot(dir, spot, center.sub(origin), radius.magnitude());
 }
 
-extern matrix4 worldmatrix[RENDER_MAX_INSTANCES], screenmatrix[RENDER_MAX_INSTANCES];
+extern matrix4 worldmatrix[RENDER_MAX_VIEWS], screenmatrix[RENDER_MAX_VIEWS];
 
 extern int transparentlayer;
 
@@ -367,7 +367,7 @@ extern void enableavatarmask();
 extern void disableavatarmask();
 
 // aa
-extern matrix4 nojittermatrix[RENDER_MAX_INSTANCES];
+extern matrix4 nojittermatrix[RENDER_MAX_VIEWS];
 
 extern void setupaa(int w, int h);
 extern void jitteraa();

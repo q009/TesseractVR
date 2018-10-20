@@ -87,7 +87,7 @@ namespace sphere
 
     void draw()
     {
-        glDrawElementsInstanced_(GL_TRIANGLES, numindices, GL_UNSIGNED_SHORT, indices, renderinstances);
+        glDrawElementsInstanced_(GL_TRIANGLES, numindices, GL_UNSIGNED_SHORT, indices, viewinstances);
         xtraverts += numindices;
         glde++;
     }
@@ -164,14 +164,14 @@ struct fireballrenderer : listrenderer
         LOCALPARAM(texgenS, rot.transposedtransform(s));
         LOCALPARAM(texgenT, rot.transposedtransform(t));
 
-        matrix4 m[RENDER_MAX_INSTANCES];
-        loopi(RENDER_MAX_INSTANCES)
+        matrix4 m[RENDER_MAX_VIEWS];
+        loopi(RENDER_MAX_VIEWS)
         {
             m[i] = matrix4(rot, o);
             m[i].scale(psize, psize, inside ? -psize : psize);
             m[i].mul(camprojmatrix[i], m[i]);
         }
-        LOCALPARAMV(explosionmatrix, m, RENDER_MAX_INSTANCES);
+        LOCALPARAMV(explosionmatrix, m, RENDER_MAX_VIEWS);
 
         LOCALPARAM(center, o);
         LOCALPARAMF(blendparams, inside ? 0.5f : 4, inside ? 0.25f : 0);

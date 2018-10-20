@@ -46,8 +46,8 @@ void setupcaustics(int tmu, float surface = -1e16f)
     if(surface > -1e15f)
     {
         float bz = surface + camera1->o.z + (vertwater ? WATER_AMPLITUDE : 0);
-        matrix4 m[RENDER_MAX_INSTANCES];
-        loopi(RENDER_MAX_INSTANCES)
+        matrix4 m[RENDER_MAX_VIEWS];
+        loopi(RENDER_MAX_VIEWS)
         {
             m[i] = matrix4(vec4(s.x, t.x,  0, 0),
                            vec4(s.y, t.y,  0, 0),
@@ -57,7 +57,7 @@ void setupcaustics(int tmu, float surface = -1e16f)
             m[i].mul(worldmatrix[i]);
         }
 
-        GLOBALPARAMV(causticsmatrix, m, RENDER_MAX_INSTANCES);
+        GLOBALPARAMV(causticsmatrix, m, RENDER_MAX_VIEWS);
         blendscale *= 0.5f;
         blendoffset = 0;
     }

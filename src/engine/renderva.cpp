@@ -4,7 +4,7 @@
 
 static inline void drawtris(GLsizei numindices, const GLvoid *indices, ushort minvert, ushort maxvert)
 {
-    glDrawElementsInstanced_(GL_TRIANGLES, numindices, GL_UNSIGNED_SHORT, indices, renderinstances);
+    glDrawElementsInstanced_(GL_TRIANGLES, numindices, GL_UNSIGNED_SHORT, indices, viewinstances);
     glde++;
 }
 
@@ -449,7 +449,7 @@ void drawbb(const ivec &bo, const ivec &br)
 {
     LOCALPARAMF(bborigin, bo.x, bo.y, bo.z);
     LOCALPARAMF(bbsize, br.x, br.y, br.z);
-    glDrawElementsInstanced_(GL_TRIANGLES, 3*2*6, GL_UNSIGNED_SHORT, (ushort *)0, renderinstances);
+    glDrawElementsInstanced_(GL_TRIANGLES, 3*2*6, GL_UNSIGNED_SHORT, (ushort *)0, viewinstances);
     xtraverts += 8;
 }
 

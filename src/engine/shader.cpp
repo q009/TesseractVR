@@ -170,8 +170,8 @@ static void compileglslshader(Shader &s, GLenum type, GLuint &obj, const char *d
         parts[numparts++] = glslversions[i].header;
         break;
     }
-    defformatstring(maxinstances, "#define RENDER_MAX_INSTANCES %d\n", RENDER_MAX_INSTANCES);
-    parts[numparts++] = maxinstances;
+    defformatstring(renderviews, "#define RENDER_VIEWS %d\n", viewinstances);
+    parts[numparts++] = renderviews;
     if(glslversion < 140)
     {
         parts[numparts++] = "#extension GL_ARB_texture_rectangle : enable\n";
@@ -926,7 +926,7 @@ static void genfogshader(vector<char> &vsbuf, vector<char> &psbuf, const char *v
         const char *fogparams =
             "\nuniform vec3 fogcolor;\n"
             "uniform vec2 fogdensity;\n"
-            "uniform vec4 radialfogscale[RENDER_MAX_INSTANCES];\n"
+            "uniform vec4 radialfogscale[RENDER_VIEWS];\n"
             "flat varying int instanceID;\n"
             "#define fogcoord lineardepth*length(vec3(gl_FragCoord.xy*radialfogscale[instanceID].xy + radialfogscale[instanceID].zw, 1.0))\n";
         psbuf.put(fogparams, strlen(fogparams));
