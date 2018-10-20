@@ -14,7 +14,7 @@ VAR(glversion, 1, 0, 0);
 VAR(glslversion, 1, 0, 0);
 VAR(glcompat, 1, 0, 0);
 
-VARFP(instancedstereo, 0, 0, 1, {
+VARFP(instancedstereo, 0, 1, 1, {
     viewinstances = instancedstereo ? 2 : 1;
     initwarning("Instanced stereo rendering", INIT_LOAD, CHANGE_SHADERS);
 });
