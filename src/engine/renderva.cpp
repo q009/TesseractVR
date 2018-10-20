@@ -202,9 +202,14 @@ void calcvfcD()
 
 void setvfcP(const vec &bbmin, const vec &bbmax)
 {
-    vec4 px = camprojmatrix[0].rowx(), py = camprojmatrix[0].rowy(), pz = camprojmatrix[0].rowz(), pw = camprojmatrix[0].roww();
-    vfcP[0] = plane(vec4(pw).mul(-bbmin.x).add(px)).normalize(); // left plane
-    vfcP[1] = plane(vec4(pw).mul(bbmax.x).sub(px)).normalize(); // right plane
+    vec4 plx = camprojmatrix[0].rowx(),
+         prx = camprojmatrix[instancedstereo ? 1 : 0].rowx(),
+         py = camprojmatrix[0].rowy(),
+         pz = camprojmatrix[0].rowz(),
+         pw = camprojmatrix[0].roww();
+
+    vfcP[0] = plane(vec4(pw).mul(-bbmin.x).add(plx)).normalize(); // left plane
+    vfcP[1] = plane(vec4(pw).mul(bbmax.x).sub(prx)).normalize(); // right plane
     vfcP[2] = plane(vec4(pw).mul(-bbmin.y).add(py)).normalize(); // bottom plane
     vfcP[3] = plane(vec4(pw).mul(bbmax.y).sub(py)).normalize(); // top plane
     vfcP[4] = plane(vec4(pw).add(pz)).normalize(); // near/far planes
