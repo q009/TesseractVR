@@ -1724,7 +1724,7 @@ void vecfromyawpitch(float yaw, float pitch, const vec &movedir, vec &m)
 
 void vecfromyawpitch(float yaw, float pitch, float move, float strafe, vec &m)
 {
-    vecfromyawpitch(yaw, pitch, vec(move, strafe, 0), m);
+    vecfromyawpitch(yaw, pitch, vec(strafe, move, 0), m);
 }
 
 void vectoyawpitch(const vec &v, float &yaw, float &pitch)
