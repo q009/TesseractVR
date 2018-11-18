@@ -1912,8 +1912,6 @@ void movevrplayer(physent *pl)
         vec step = vr::gethmd()->getposdelta();
         pl->eyeheight = pos.z;
         move(pl, step);
-        // TODO: I don't suppose this is the right way to handle movement
-        pl->newpos = pl->o;
     }
 }
 
@@ -1954,7 +1952,11 @@ void moveplayer(physent *pl, int moveres, bool local)
         return;
     }
 
-    if(local) pl->o = pl->newpos;
+    if(local)
+    {
+        pl->o = pl->newpos;
+        movevrplayer(pl);
+    }
     loopi(physsteps-1) moveplayer(pl, moveres, local, physframetime);
     if(local) pl->deltapos = pl->o;
     moveplayer(pl, moveres, local, physframetime);
